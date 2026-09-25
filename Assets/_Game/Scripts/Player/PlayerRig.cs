@@ -6,13 +6,13 @@ using UnityEngine.InputSystem;
 namespace SIHKH.Player
 {
     /// <summary>
-    /// One player on the cart. The server decides which seat you get; every peer then
+    /// One player on the ring. The server decides which seat you get; every peer then
     /// pins you to that seat each frame, so nothing about your position is ever sent.
-    /// Only your look direction travels over the network, and you own it: the other
-    /// player needs to see where you're aiming, but nobody else may steer your head.
+    /// Only your inputs travel over the network, and you own them: look direction so
+    /// your partner sees where you're aiming, strafe so the server can move your cart.
     /// </summary>
     [RequireComponent(typeof(NetworkObject))]
-    public class PlayerRig : NetworkBehaviour
+    public class PlayerRig : NetworkBehaviour, ICartDriver
     {
         [SerializeField] private Transform _head;
         [SerializeField] private Camera _camera;
@@ -27,21 +27,28 @@ namespace SIHKH.Player
         private readonly NetworkVariable<Vector2> _look = new(
             Vector2.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+        // -1 left .. +1 right from the seat's point of view. Only the server reads it.
+        private readonly NetworkVariable<float> _strafe = new(
+            0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         private InputAction _lookAction;
+        private InputAction _moveAction;
 
         public int Seat => _seat.Value;
         public Vector2 Look => _look.Value;
+        public float Strafe => _strafe.Value;
 
         public override void OnNetworkSpawn()
         {
             if (IsServer)
             {
-                _seat.Value = CartSeats.Current.Claim(OwnerClientId);
+                _seat.Value = CartSeats.Current.Claim(OwnerClientId, this);
             }
 
             if (IsOwner)
             {
                 _lookAction = InputSystem.actions.FindAction("Player/Look");
+                _moveAction = InputSystem.actions.FindAction("Player/Move");
                 _camera.enabled = true;
                 Cursor.lockState = CursorLockMode.Locked;
             }
@@ -70,6 +77,9 @@ namespace SIHKH.Player
                     ? CursorLockMode.None
                     : CursorLockMode.Locked;
             }
+
+            // A/D slides your cart around the ring. W/S does nothing yet.
+            _strafe.Value = Mathf.Clamp(_moveAction.ReadValue<Vector2>().x, -1f, 1f);
 
             // Don't turn the head while the player is using the mouse on the overlay.
             if (Cursor.lockState != CursorLockMode.Locked) return;
