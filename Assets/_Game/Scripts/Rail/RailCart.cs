@@ -5,52 +5,51 @@ using UnityEngine.Splines;
 namespace SIHKH.Rail
 {
     /// <summary>
-    /// The cart both players ride. The server owns a single number, distance travelled
-    /// along the rail; every machine turns that number into a position on its own copy
-    /// of the spline. Nothing else about the cart is ever sent over the network.
+    /// One cart on the rail. Its only replicated state is a distance along the spline,
+    /// written by the server; every machine turns that number into a pose on its own
+    /// copy of the spline. The cart itself never decides to move: RailTrain drives it.
     /// </summary>
     [RequireComponent(typeof(NetworkObject))]
     public class RailCart : NetworkBehaviour
     {
         [SerializeField] private SplineContainer _rail;
-        [SerializeField, Min(0f)] private float _speed = 4f; // metres per second
-        [SerializeField] private bool _loop = true;
+        [SerializeField] private Transform _seat;
+        [SerializeField] private Transform _chainAnchor;
 
-        // Server writes, everyone reads.
         private readonly NetworkVariable<float> _distance = new(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         private float _railLength;
 
-        public float Speed => _speed;
+        public Transform Seat => _seat;
+        public Transform ChainAnchor => _chainAnchor;
         public float Distance => _distance.Value;
+        public float RailLength => _railLength;
 
         private void Awake()
         {
             _railLength = _rail.CalculateLength();
         }
 
+        /// <summary>Server only. Distances wrap, so the loop is endless.</summary>
+        public void SetDistance(float metres)
+        {
+            _distance.Value = Mathf.Repeat(metres, _railLength);
+        }
+
+        /// <summary>Server only.</summary>
+        public void Advance(float metres) => SetDistance(_distance.Value + metres);
+
         private void Update()
         {
-            // IsServer is a flag NGO sets at spawn and never clears on shutdown, so a
-            // bare IsServer check keeps the cart rolling after Disconnect. IsSpawned
-            // is the honest signal: no session, no movement.
+            // IsSpawned, not IsServer: NGO never clears IsServer on shutdown.
             if (!IsSpawned) return;
-
-            if (IsServer)
-            {
-                float d = _distance.Value + _speed * Time.deltaTime;
-                _distance.Value = _loop ? d % _railLength : Mathf.Min(d, _railLength);
-            }
-
             PlaceOnRail(_distance.Value);
         }
 
         private void PlaceOnRail(float distance)
         {
-            // Splines are sampled by a 0..1 parameter, not by metres, so normalise first.
-            float t = Mathf.Clamp01(distance / _railLength);
-            _rail.Evaluate(t, out var position, out var tangent, out var up);
+            _rail.Evaluate(distance / _railLength, out var position, out var tangent, out var up);
             transform.SetPositionAndRotation(position, Quaternion.LookRotation(tangent, up));
         }
     }
