@@ -17,16 +17,18 @@ namespace SIHKH.Rail
         [SerializeField] private RailCart _cartB;
 
         [Header("Strafing")]
-        [SerializeField, Min(0f)] private float _strafeSpeed = 3f;    // m/s along the rail at full input
+        [SerializeField, Min(0f)] private float _strafeSpeed = 4f;    // m/s along the rail at full input
         // Drive force grows with how far you are from your target speed, so two players
         // pulling opposite ways strain the chain twice as hard as one player alone.
         // Snapping is meant to be a two-person mistake.
         [SerializeField, Min(0.1f)] private float _driveGain = 4f;    // m/s² per m/s of speed error
 
         [Header("Chain")]
-        [SerializeField, Range(1f, 179f)] private float _snapAngle = 60f;   // degrees off opposite: chain breaks
+        // Tuned so one player strafing alone settles just short of the snap point; any
+        // pull the other way from the partner then breaks it.
+        [SerializeField, Range(1f, 179f)] private float _snapAngle = 50f;   // degrees off opposite: chain breaks
         [SerializeField, Range(0f, 90f)] private float _rehookAngle = 15f;  // degrees off opposite: chain reconnects
-        [SerializeField, Min(0f)] private float _springStrength = 1.5f;     // m/s² per metre off opposite
+        [SerializeField, Min(0f)] private float _springStrength = 0.8f;     // m/s² per metre off opposite
         [SerializeField, Min(0f)] private float _springDamping = 1f;        // m/s² per m/s of relative speed
         [SerializeField, Min(0.5f)] private float _minGap = 3f;             // carts can't pass through each other
 

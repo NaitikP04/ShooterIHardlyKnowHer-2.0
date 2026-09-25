@@ -12,7 +12,7 @@ namespace SIHKH.Rail
     public class ChainVisual : MonoBehaviour
     {
         [SerializeField] private CartPair _carts;
-        [SerializeField] private float _slackSag = 1.5f;   // droop in the middle when fully slack, metres
+        [SerializeField] private float _slackSag = 0.8f;   // droop in the middle when fully slack, metres
         [SerializeField, Min(2)] private int _segments = 12;
 
         private LineRenderer _line;
