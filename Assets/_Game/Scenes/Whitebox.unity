@@ -875,7 +875,7 @@ MonoBehaviour:
     Address: 127.0.0.1
     Port: 7777
     WebSocketPath: /
-    ServerListenAddress: 
+    ServerListenAddress: 127.0.0.1
     ClientBindPort: 0
   DebugSimulator:
     PacketDelayMS: 0
@@ -1672,10 +1672,10 @@ MonoBehaviour:
   _cartB: {fileID: 312217425}
   _strafeSpeed: 4
   _driveGain: 4
-  _snapAngle: 26
-  _rehookAngle: 8
-  _springStrength: 2
-  _springDamping: 1.5
+  _snapStretch: 14
+  _rehookStretch: 3
+  _springStrength: 1
+  _springDamping: 1
   _minGap: 3
   _startLapFraction: 0.25
 --- !u!1660057539 &9223372036854775807

@@ -1,9 +1,15 @@
 # ShooterIHardlyKnowHer 2.0
 
-2-player online co-op, endless rail shooter. Two players ride one cart along a spline rail, facing
-opposite directions, tethered together. They can't look behind them, so each must shoot *past* the
-other to kill the waves coming from their friend's side. Cartoon fantasy, goofy, rage-bait but fun.
-Friendly fire is ON. Weapons counter specific enemy types and must be tossed to your partner.
+2-player online co-op, endless wave shooter. One oval rail (36x20 m). Each player rides their own
+cart on it, on opposite long sides, facing each other across the gap. A/D slides your cart along
+your side. The chain between you wants your partner *directly across* from you: slide and you drag
+them along with you; run opposite ways and it stretches until it snaps, re-hooking when you get
+back across from each other. You can't look behind you (yaw clamp +/-90 from facing your partner),
+so each player must shoot *past* the other to kill the enemies coming at their partner's back.
+Cartoon fantasy, goofy, rage-bait but fun. Friendly fire is ON. Weapons counter specific enemy
+types and must be tossed across the gap to your partner.
+
+If the arena feels too static later: make the whole ring travel along a bigger loop, or rethink.
 
 Rebuilt from scratch after a messy 2024-25 team project (`D:\ShooterIHardlyKnowHer`, Unity 2022.3).
 Reuse *ideas* and *art* from it, never code.
@@ -52,8 +58,10 @@ Assets/Scenes/          template SampleScene (delete once _Game/Scenes has a mai
 
 ## Roadmap
 1. Setup (done): project, packages, git, this file.
-2. Whitebox core: spline rail + cart, 2 players facing opposite ways, 180° look clamp, tether,
-   one hitscan gun, cube enemies from both ends. Networked from day one.
+2. Whitebox core (rail, carts, seats, strafing, chain, first-person look: DONE): next is
+   one hitscan gun + cube enemies from outside the oval. Networked from day one.
+   Testing note: Multiplayer Play Mode sends keys only to the focused window, so two-player
+   input can't be held at once from one keyboard; a "plant" toggle (S) would fix that.
 3. Weapon system: ScriptableObject weapons, damage types vs enemy types, toss mechanic.
 4. Waves / roguelike loop: wave director, enemy archetypes, unlocks, run end + restart.
 5. Art pass: Wizard/Clown player models, enemy models, cartoon shaders, VFX, audio.

@@ -5,8 +5,7 @@ namespace SIHKH.Rail
     /// <summary>
     /// Draws the chain straight across the ring between the two carts. Purely cosmetic
     /// and purely local: the anchors it reads are already where the network says they
-    /// are. Droops when the pair is opposite, pulls taut as they drift off, and vanishes
-    /// when snapped.
+    /// are. Droops when slack, pulls taut as it stretches, and vanishes when snapped.
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
     public class ChainVisual : MonoBehaviour
@@ -28,8 +27,8 @@ namespace SIHKH.Rail
             _line.enabled = !_carts.Snapped;
             if (!_line.enabled) return;
 
-            // Opposite = full sag; at the snap angle the chain is a straight line.
-            float tension = Mathf.InverseLerp(0f, _carts.SnapArc, Mathf.Abs(_carts.Deviation));
+            // Directly across = full sag; at the snap point the chain is a straight line.
+            float tension = Mathf.InverseLerp(0f, _carts.SnapStretch, Mathf.Abs(_carts.Stretch));
             float sag = _slackSag * (1f - tension);
 
             Vector3 a = _carts.CartA.ChainAnchor.position;
