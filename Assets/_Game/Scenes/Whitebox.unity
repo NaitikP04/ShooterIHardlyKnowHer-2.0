@@ -1672,11 +1672,12 @@ MonoBehaviour:
   _cartB: {fileID: 312217425}
   _strafeSpeed: 4
   _driveGain: 4
-  _snapAngle: 50
-  _rehookAngle: 15
-  _springStrength: 0.8
-  _springDamping: 1
+  _snapAngle: 26
+  _rehookAngle: 8
+  _springStrength: 2
+  _springDamping: 1.5
   _minGap: 3
+  _startLapFraction: 0.25
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

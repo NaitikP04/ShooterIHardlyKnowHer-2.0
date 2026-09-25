@@ -24,13 +24,18 @@ namespace SIHKH.Rail
         [SerializeField, Min(0.1f)] private float _driveGain = 4f;    // m/s² per m/s of speed error
 
         [Header("Chain")]
-        // Tuned so one player strafing alone settles just short of the snap point; any
-        // pull the other way from the partner then breaks it.
-        [SerializeField, Range(1f, 179f)] private float _snapAngle = 50f;   // degrees off opposite: chain breaks
-        [SerializeField, Range(0f, 90f)] private float _rehookAngle = 15f;  // degrees off opposite: chain reconnects
-        [SerializeField, Min(0f)] private float _springStrength = 0.8f;     // m/s² per metre off opposite
-        [SerializeField, Min(0f)] private float _springDamping = 1f;        // m/s² per m/s of relative speed
+        // Tuned so one player strafing alone drags their partner and settles well short of
+        // the snap point (~4 m off); two players pulling opposite ways break it (~8 m).
+        [SerializeField, Range(1f, 179f)] private float _snapAngle = 26f;   // degrees off opposite: chain breaks
+        [SerializeField, Range(0f, 90f)] private float _rehookAngle = 8f;   // degrees off opposite: chain reconnects
+        [SerializeField, Min(0f)] private float _springStrength = 2f;       // m/s² per metre off opposite
+        [SerializeField, Min(0f)] private float _springDamping = 1.5f;      // m/s² per m/s of relative speed
         [SerializeField, Min(0.5f)] private float _minGap = 3f;             // carts can't pass through each other
+
+        [Header("Spawn")]
+        // 0.25 puts cart A a quarter lap in, i.e. at one of the oval's short ends, so the
+        // pair starts across the narrow axis with the shortest possible chain.
+        [SerializeField, Range(0f, 1f)] private float _startLapFraction = 0.25f;
 
         private readonly NetworkVariable<bool> _snapped = new(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -75,8 +80,9 @@ namespace SIHKH.Rail
             // before we write to their NetworkVariables.
             if (!_placed)
             {
-                _cartA.SetDistance(0f);
-                _cartB.SetDistance(HalfLap);
+                float start = _startLapFraction * RailLength;
+                _cartA.SetDistance(start);
+                _cartB.SetDistance(start + HalfLap);
                 _velocityA = _velocityB = 0f;
                 _placed = true;
             }
