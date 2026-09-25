@@ -32,6 +32,11 @@ namespace SIHKH.Rail
 
         private void Update()
         {
+            // IsServer is a flag NGO sets at spawn and never clears on shutdown, so a
+            // bare IsServer check keeps the cart rolling after Disconnect. IsSpawned
+            // is the honest signal: no session, no movement.
+            if (!IsSpawned) return;
+
             if (IsServer)
             {
                 float d = _distance.Value + _speed * Time.deltaTime;
