@@ -1,0 +1,33 @@
+# Unity YAML files: merge with UnityYAMLMerge, always LF
+*.unity      text eol=lf merge=unityyamlmerge
+*.prefab     text eol=lf merge=unityyamlmerge
+*.asset      text eol=lf merge=unityyamlmerge
+*.meta       text eol=lf merge=unityyamlmerge
+*.mat        text eol=lf merge=unityyamlmerge
+*.anim       text eol=lf merge=unityyamlmerge
+*.controller text eol=lf merge=unityyamlmerge
+*.physicMaterial text eol=lf merge=unityyamlmerge
+*.inputactions text eol=lf
+*.asmdef     text eol=lf
+*.json       text eol=lf
+*.cs         text eol=lf diff=csharp
+*.shader     text eol=lf
+*.shadergraph text eol=lf
+*.uxml       text eol=lf
+*.uss        text eol=lf
+*.md         text eol=lf
+
+# Binary assets
+*.fbx   binary
+*.obj   binary
+*.blend binary
+*.png   binary
+*.jpg   binary
+*.tga   binary
+*.psd   binary
+*.wav   binary
+*.mp3   binary
+*.ogg   binary
+*.ttf   binary
+*.otf   binary
+*.dll   binary
