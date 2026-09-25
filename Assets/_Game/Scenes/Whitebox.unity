@@ -197,7 +197,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 398878078}
-    PlayerPrefab: {fileID: 0}
+    PlayerPrefab: {fileID: 4751258317796054784, guid: 95e69b8e5971b27458b2696860dbd6b3, type: 3}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: b4a882696b88a394bbc33f3c3307d6a3, type: 2}
@@ -250,6 +250,7 @@ GameObject:
   - component: {fileID: 459230431}
   - component: {fileID: 459230430}
   - component: {fileID: 459230432}
+  - component: {fileID: 459230433}
   m_Layer: 0
   m_Name: Cart
   m_TagString: Untagged
@@ -319,6 +320,21 @@ MonoBehaviour:
   _rail: {fileID: 2082219625}
   _speed: 4
   _loop: 1
+--- !u!114 &459230433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 459230429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6a8f5acd6d301c4da67d1239593466d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Rail.CartSeats
+  _seats:
+  - {fileID: 1471967456}
+  - {fileID: 1442914649}
 --- !u!1 &491043001
 GameObject:
   m_ObjectHideFlags: 0
@@ -554,6 +570,7 @@ GameObject:
   m_Component:
   - component: {fileID: 691743923}
   - component: {fileID: 691743922}
+  - component: {fileID: 691743924}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -641,6 +658,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &691743924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 691743921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &796886605
 GameObject:
   m_ObjectHideFlags: 0
