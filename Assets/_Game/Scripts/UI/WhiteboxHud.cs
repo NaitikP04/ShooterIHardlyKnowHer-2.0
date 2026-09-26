@@ -34,8 +34,44 @@ namespace SIHKH.UI
             var style = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.LowerLeft };
             style.normal.textColor = Color.white;
             string hp = _health != null ? $"HP {_health.Current:0}/{_health.Max:0}" : "";
-            string gun = _weapon != null && _weapon.Current != null ? _weapon.Current.DisplayName : "";
-            GUI.Label(new Rect(16, Screen.height - 60, 400, 44), $"{hp}\n{gun}", style);
+            GUI.Label(new Rect(16, Screen.height - 40, 400, 30), hp, style);
+
+            if (_weapon != null)
+            {
+                DrawSlots(style);
+                DrawInteractPrompt();
+            }
+        }
+
+        private void DrawInteractPrompt()
+        {
+            OneOffWeapon item = _weapon.PromptTarget(out string action);
+            Camera cam = GetComponent<Player.PlayerRig>().Camera;
+            if (item == null || cam == null) return;
+
+            Vector3 screen = cam.WorldToScreenPoint(item.transform.position + Vector3.up * 0.4f);
+            if (screen.z <= 0f) return; // behind the camera
+
+            var style = new GUIStyle(GUI.skin.box) { fontSize = 20, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            style.normal.textColor = action == "Catch!" ? Color.yellow : Color.white;
+            var rect = new Rect(screen.x - 70f, Screen.height - screen.y - 50f, 140f, 34f);
+            GUI.Box(rect, $"[E] {action}", style);
+        }
+
+        private void DrawSlots(GUIStyle style)
+        {
+            // Slot 0 is the default gun; 1..N are one-offs. ">" marks the selection. Q cycles.
+            int slots = _weapon.OneOffSlots;
+            float y = Screen.height - 40f - 26f * (slots + 1);
+            for (int slot = 0; slot <= slots; slot++)
+            {
+                var def = _weapon.SlotDefinition(slot);
+                bool selected = slot == _weapon.SelectedSlot;
+                string name = def != null ? def.DisplayName : "—";
+                style.normal.textColor = selected ? Color.yellow : (def != null ? Color.white : new Color(1f, 1f, 1f, 0.4f));
+                GUI.Label(new Rect(16, y + 26f * slot, 400, 26), $"{(selected ? ">" : " ")} {slot + 1}  {name}", style);
+            }
+            style.normal.textColor = Color.white;
         }
 
         private void DrawCrosshair()

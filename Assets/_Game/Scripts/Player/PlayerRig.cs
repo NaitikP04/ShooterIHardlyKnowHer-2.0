@@ -61,6 +61,7 @@ namespace SIHKH.Player
 
         public int Seat => _seat.Value;
         public Transform Head => _head;
+        public Camera Camera => _camera;
         public Vector2 Look => _look.Value;
         public float Strafe => _strafe.Value;
         public bool Planted => _planted.Value;

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SIHKH.Core;
 using SIHKH.Player;
 using Unity.Netcode;
@@ -11,14 +12,15 @@ namespace SIHKH.Weapons
     /// That split is what makes friendly fire fair: your partner's collider is just another
     /// thing the server's raycast can find.
     ///
-    /// Every player always has the default weapon. If they're holding a one-off and have it
-    /// selected, that one's numbers are used instead. Which one-off you hold is the item's
-    /// business (OneOffWeapon); whether you've selected it is yours.
+    /// Inventory: slot 0 is the default weapon everyone always has; slots 1..N hold one-offs.
+    /// Which item sits in which slot is the item's business (OneOffWeapon, server-owned);
+    /// which slot is selected is the owner's.
     /// </summary>
     [RequireComponent(typeof(NetworkObject), typeof(PlayerRig))]
     public class PlayerWeapon : NetworkBehaviour
     {
         [SerializeField] private WeaponDefinition _defaultWeapon;
+        [SerializeField, Range(1, 8)] private int _oneOffSlots = 3;
         [Tooltip("Where the aim ray starts: the eyes, so shots go where the crosshair points")]
         [SerializeField] private Transform _aimOrigin;
         [Tooltip("Where the tracer starts: the gun's tip, so you see the shot leave")]
@@ -32,9 +34,11 @@ namespace SIHKH.Weapons
         private const float MaxAimOriginError = 2f;   // metres between claimed and actual eye position
         private const float RateTolerance = 0.05f;    // seconds of slack on the fire rate
 
-        // Owner's choice between the default gun and the one-off they're holding.
-        private readonly NetworkVariable<bool> _useOneOff = new(
-            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        // 0 = default weapon, 1..N = one-off slots. Owner's choice.
+        private readonly NetworkVariable<int> _selectedSlot = new(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        private readonly List<OneOffWeapon> _heldScratch = new();
 
         private PlayerRig _rig;
         private InputAction _attackAction;
@@ -44,17 +48,50 @@ namespace SIHKH.Weapons
         private float _ownerNextShot;
         private float _serverNextShot;
 
-        /// <summary>The one-off this player is holding, if any. Same answer on every peer.</summary>
-        public OneOffWeapon Held => OneOffWeapon.HeldBy(OwnerClientId);
+        public int OneOffSlots => _oneOffSlots;
+        public int SelectedSlot => _selectedSlot.Value;
+        public WeaponDefinition DefaultWeapon => _defaultWeapon;
+
+        /// <summary>The one-off in the selected slot, if any. Same answer on every peer.</summary>
+        public OneOffWeapon SelectedOneOff =>
+            _selectedSlot.Value > 0 ? OneOffWeapon.HeldIn(OwnerClientId, _selectedSlot.Value) : null;
 
         /// <summary>The numbers currently in use. Same answer on every peer.</summary>
-        public WeaponDefinition Current
+        public WeaponDefinition Current => SelectedOneOff != null ? SelectedOneOff.Definition : _defaultWeapon;
+
+        /// <summary>
+        /// Owner-side: the item E would act on right now, and what E would do. Null when
+        /// there's nothing. Drives the on-screen prompt and the E key itself, so they agree.
+        /// </summary>
+        public OneOffWeapon PromptTarget(out string action)
         {
-            get
+            action = null;
+            if (OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots) < 0) return null; // hands full
+
+            foreach (var item in OneOffWeapon.All)
             {
-                OneOffWeapon held = _useOneOff.Value ? Held : null;
-                return held != null ? held.Definition : _defaultWeapon;
+                if (item.IsCatchableBy(_rig))
+                {
+                    action = "Catch!";
+                    return item;
+                }
             }
+
+            OneOffWeapon ground = OneOffWeapon.NearestOnGround(transform.position, _pickupReach);
+            if (ground != null)
+            {
+                action = "Pick up";
+                return ground;
+            }
+            return null;
+        }
+
+        /// <summary>Definition in each slot (null = empty). For HUDs.</summary>
+        public WeaponDefinition SlotDefinition(int slot)
+        {
+            if (slot == 0) return _defaultWeapon;
+            OneOffWeapon item = OneOffWeapon.HeldIn(OwnerClientId, slot);
+            return item != null ? item.Definition : null;
         }
 
         public override void OnNetworkSpawn()
@@ -74,15 +111,19 @@ namespace SIHKH.Weapons
         {
             if (!IsSpawned) return;
 
-            // Everyone: hide the default gun while a one-off is in hand and selected.
-            if (_defaultGunVisual != null) _defaultGunVisual.enabled = Current == _defaultWeapon;
+            // Everyone: the default gun is only in hand when it's the selection.
+            if (_defaultGunVisual != null) _defaultGunVisual.enabled = SelectedOneOff == null;
 
             if (!IsOwner) return;
+
+            // A selected slot that emptied (thrown, or never filled) falls back to the default.
+            if (_selectedSlot.Value > 0 && SelectedOneOff == null) _selectedSlot.Value = 0;
+
             if (Cursor.lockState != CursorLockMode.Locked) return; // mouse is on the overlay
 
-            if (_interactAction.WasPressedThisFrame()) TryPickUpNearby();
-            if (_throwAction.WasPressedThisFrame() && Held != null) ThrowRpc(_aimOrigin.forward);
-            if (_swapAction.WasPressedThisFrame() && Held != null) _useOneOff.Value = !_useOneOff.Value;
+            if (_interactAction.WasPressedThisFrame()) UseInteract();
+            if (_throwAction.WasPressedThisFrame() && SelectedOneOff != null) ThrowRpc(_selectedSlot.Value, _aimOrigin.forward);
+            if (_swapAction.WasPressedThisFrame()) CycleSelection();
 
             if (_attackAction.IsPressed() && Time.time >= _ownerNextShot)
             {
@@ -91,12 +132,33 @@ namespace SIHKH.Weapons
             }
         }
 
-        private void TryPickUpNearby()
+        private void CycleSelection()
         {
-            OneOffWeapon item = OneOffWeapon.NearestOnGround(transform.position, _pickupReach);
+            // Default -> each occupied one-off slot in order -> default.
+            OneOffWeapon.HeldBy(OwnerClientId, _heldScratch);
+            if (_heldScratch.Count == 0) return;
+
+            int current = _selectedSlot.Value;
+            foreach (var item in _heldScratch)
+            {
+                if (item.Slot > current)
+                {
+                    _selectedSlot.Value = item.Slot;
+                    return;
+                }
+            }
+            _selectedSlot.Value = 0;
+        }
+
+        private void UseInteract()
+        {
+            OneOffWeapon item = PromptTarget(out string action);
             if (item == null) return;
-            _useOneOff.Value = true; // picking something up means you want to use it
-            PickUpRpc(item.NetworkObject);
+
+            // Predict the slot the server will choose so the item is in hand immediately.
+            _selectedSlot.Value = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
+            if (action == "Catch!") CatchRpc(item.NetworkObject);
+            else PickUpRpc(item.NetworkObject);
         }
 
         /// <summary>Owner only. Aims where the eyes point, with the weapon's spread applied.</summary>
@@ -116,17 +178,29 @@ namespace SIHKH.Weapons
         [Rpc(SendTo.Server)]
         private void PickUpRpc(NetworkObjectReference itemRef)
         {
-            if (Held != null) return; // one at a time
+            int slot = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
+            if (slot < 0) return;
             if (itemRef.TryGet(out NetworkObject obj) && obj.TryGetComponent(out OneOffWeapon item))
             {
-                item.TryPickUp(_rig);
+                item.TryPickUp(_rig, slot);
             }
         }
 
         [Rpc(SendTo.Server)]
-        private void ThrowRpc(Vector3 direction)
+        private void CatchRpc(NetworkObjectReference itemRef)
         {
-            Held?.TryThrow(_rig, direction);
+            int slot = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
+            if (slot < 0) return;
+            if (itemRef.TryGet(out NetworkObject obj) && obj.TryGetComponent(out OneOffWeapon item))
+            {
+                item.TryCatch(_rig, slot);
+            }
+        }
+
+        [Rpc(SendTo.Server)]
+        private void ThrowRpc(int slot, Vector3 direction)
+        {
+            OneOffWeapon.HeldIn(OwnerClientId, slot)?.TryThrow(_rig, direction);
         }
 
         [Rpc(SendTo.Server)]

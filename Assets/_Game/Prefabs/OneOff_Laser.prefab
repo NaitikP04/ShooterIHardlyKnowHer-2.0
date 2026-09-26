@@ -133,11 +133,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.OneOffWeapon
   ShowTopMostFoldoutHeaderGroup: 1
   _definition: {fileID: 11400000, guid: 6c52535d269c06747904831cefe9786c, type: 2}
-  _throwSpeed: 18
-  _upwardBias: 0.3
+  _throwSpeed: 15
+  _upwardBias: 0.45
   _throwerGraceSeconds: 0.4
-  _catchRadius: 1.3
+  _catchRadius: 2.2
+  _catchLeadSeconds: 0.7
   _catchFacingDot: 0.3
+  _bonkRadius: 0.9
   _bonkDamage: 2
   _pickupRadius: 2.5
   _restingHeight: 0.3

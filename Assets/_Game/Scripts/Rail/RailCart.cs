@@ -35,6 +35,9 @@ namespace SIHKH.Rail
         public void SetDistance(float metres)
         {
             _distance.Value = Mathf.Repeat(metres, _railLength);
+            // Move now, not next Update: anything reading the seat this frame (spawners,
+            // the players' LateUpdate) must see the cart where its distance says it is.
+            PlaceOnRail(_distance.Value);
         }
 
         /// <summary>Server only.</summary>
