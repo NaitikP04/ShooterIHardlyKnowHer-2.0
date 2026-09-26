@@ -41,12 +41,18 @@ namespace SIHKH.Player
         private readonly NetworkVariable<float> _strafe = new(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+        // Toggled with S. Dug in: the cart won't budge, so a pulling partner snaps the chain.
+        private readonly NetworkVariable<bool> _planted = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         private InputAction _lookAction;
         private InputAction _moveAction;
+        private bool _plantKeyHeld;
 
         public int Seat => _seat.Value;
         public Vector2 Look => _look.Value;
         public float Strafe => _strafe.Value;
+        public bool Planted => _planted.Value;
 
         public override void OnNetworkSpawn()
         {
@@ -57,8 +63,9 @@ namespace SIHKH.Player
 
             // Late joiners get the seat with the spawn payload; the host's own player gets
             // it a frame later via the change callback. Handle both.
-            _seat.OnValueChanged += (_, seat) => ApplySeatTint(seat);
-            ApplySeatTint(_seat.Value);
+            _seat.OnValueChanged += (_, _) => ApplyTint();
+            _planted.OnValueChanged += (_, _) => ApplyTint();
+            ApplyTint();
 
             if (IsOwner)
             {
@@ -93,8 +100,15 @@ namespace SIHKH.Player
                     : CursorLockMode.Locked;
             }
 
-            // A/D slides your cart around the ring. W/S does nothing yet.
-            _strafe.Value = Mathf.Clamp(_moveAction.ReadValue<Vector2>().x, -1f, 1f);
+            Vector2 move = _moveAction.ReadValue<Vector2>();
+
+            // A/D slides your cart along your side of the oval.
+            _strafe.Value = Mathf.Clamp(move.x, -1f, 1f);
+
+            // S toggles planting. Edge-detected by hand because Move is an axis, not a button.
+            bool plantKey = move.y < -0.5f;
+            if (plantKey && !_plantKeyHeld) _planted.Value = !_planted.Value;
+            _plantKeyHeld = plantKey;
 
             // Don't turn the head while the player is using the mouse on the overlay.
             if (Cursor.lockState != CursorLockMode.Locked) return;
@@ -106,12 +120,16 @@ namespace SIHKH.Player
             _look.Value = look;
         }
 
-        private void ApplySeatTint(int seat)
+        private void ApplyTint()
         {
+            int seat = _seat.Value;
             if (seat < 0 || seat >= _seatColors.Length) return;
 
+            // Planted reads as a darker version of your colour, so it's visible from across
+            // the gap without any UI.
+            Color c = _planted.Value ? _seatColors[seat] * 0.45f : _seatColors[seat];
             var block = new MaterialPropertyBlock();
-            block.SetColor(BaseColorId, _seatColors[seat]);
+            block.SetColor(BaseColorId, c);
             foreach (var r in GetComponentsInChildren<Renderer>())
             {
                 r.SetPropertyBlock(block);

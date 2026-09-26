@@ -62,7 +62,11 @@ Assets/Scenes/          template SampleScene (delete once _Game/Scenes has a mai
    one hitscan gun + cube enemies from outside the oval. Networked from day one.
    Testing note: Multiplayer Play Mode sends keys only to the focused window, so two-player
    input can't be held at once from one keyboard; a "plant" toggle (S) would fix that.
-3. Weapon system: ScriptableObject weapons, damage types vs enemy types, toss mechanic.
+3. Weapon system: `WeaponDefinition` ScriptableObjects. Pea shooter = default, both players always
+   have it. Laser, Bouncy, Boomerang = one-offs: a single instance that must be thrown across the
+   gap and caught; a missed catch bonks the receiver for damage; the boomerang's return can be
+   caught by either player. Every tunable (fire rate, damage, chain stiffness...) is serialised.
+   Use separate sandbox scenes per feature (Sandbox_Chain, Sandbox_Weapons).
 4. Waves / roguelike loop: wave director, enemy archetypes, unlocks, run end + restart.
 5. Art pass: Wizard/Clown player models, enemy models, cartoon shaders, VFX, audio.
 6. Relay/Lobby for playing over the internet, then Steam.

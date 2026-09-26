@@ -89,6 +89,13 @@ namespace SIHKH.Rail
             Drive(ref _velocityB, _seats.Strafe(1) * _seats.StrafeRailDirection(1), dt);
             ApplyChain(dt);
 
+            // A planted cart is an immovable anchor: the chain's pull on it is discarded, so
+            // all of the stretch lands on the partner. One player pulling against a planted
+            // partner reaches strafeSpeed * driveGain / springStrength metres of stretch,
+            // which is past the snap point by design.
+            if (_seats.Planted(0)) _velocityA = 0f;
+            if (_seats.Planted(1)) _velocityB = 0f;
+
             _cartA.Advance(_velocityA * dt);
             _cartB.Advance(_velocityB * dt);
             KeepApart();

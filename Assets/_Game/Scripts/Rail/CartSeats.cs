@@ -72,5 +72,8 @@ namespace SIHKH.Rail
 
         /// <summary>Server only. An empty seat holds still.</summary>
         public float Strafe(int seat) => _occupants[seat]?.Strafe ?? 0f;
+
+        /// <summary>Server only. An empty seat is never planted, so it can be dragged.</summary>
+        public bool Planted(int seat) => _occupants[seat]?.Planted ?? false;
     }
 }
