@@ -20,6 +20,16 @@ namespace SIHKH.Player
         [SerializeField, Range(10f, 89f)] private float _pitchLimit = 60f;
         [SerializeField] private float _mouseSensitivity = 0.1f;            // degrees per pixel
 
+        // Whitebox tint per seat: blue side, orange side. Applied with a property block so
+        // every player shares one material instead of each spawning its own copy.
+        [SerializeField] private Color[] _seatColors =
+        {
+            new(0.25f, 0.5f, 0.95f),
+            new(0.95f, 0.55f, 0.2f),
+        };
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
         private readonly NetworkVariable<int> _seat = new(
             -1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -44,6 +54,11 @@ namespace SIHKH.Player
             {
                 _seat.Value = CartSeats.Current.Claim(OwnerClientId, this);
             }
+
+            // Late joiners get the seat with the spawn payload; the host's own player gets
+            // it a frame later via the change callback. Handle both.
+            _seat.OnValueChanged += (_, seat) => ApplySeatTint(seat);
+            ApplySeatTint(_seat.Value);
 
             if (IsOwner)
             {
@@ -89,6 +104,18 @@ namespace SIHKH.Player
             look.x = Mathf.Clamp(look.x + delta.x, -_yawLimit, _yawLimit);
             look.y = Mathf.Clamp(look.y + delta.y, -_pitchLimit, _pitchLimit);
             _look.Value = look;
+        }
+
+        private void ApplySeatTint(int seat)
+        {
+            if (seat < 0 || seat >= _seatColors.Length) return;
+
+            var block = new MaterialPropertyBlock();
+            block.SetColor(BaseColorId, _seatColors[seat]);
+            foreach (var r in GetComponentsInChildren<Renderer>())
+            {
+                r.SetPropertyBlock(block);
+            }
         }
 
         // LateUpdate so the cart has already moved this frame; otherwise we'd sit one
