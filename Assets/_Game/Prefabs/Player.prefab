@@ -228,11 +228,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.PlayerWeapon
   ShowTopMostFoldoutHeaderGroup: 1
-  _weapon: {fileID: 11400000, guid: 6093126fca03dfb4692d9449d0ced203, type: 2}
+  _defaultWeapon: {fileID: 11400000, guid: 6093126fca03dfb4692d9449d0ced203, type: 2}
   _aimOrigin: {fileID: 8040967883612635109}
   _muzzle: {fileID: 6091297296401116687}
+  _defaultGunVisual: {fileID: 7745307282624288294}
   _tracerPrefab: {fileID: 869774757698641475, guid: 1a90f4006f1c7604ab750b933d78092c, type: 3}
   _impactPrefab: {fileID: 6960272847199933650, guid: 4305c1fb62f4c6c459cdb81437acb5c7, type: 3}
+  _pickupReach: 2.5
 --- !u!114 &4037362717013292155
 MonoBehaviour:
   m_ObjectHideFlags: 0

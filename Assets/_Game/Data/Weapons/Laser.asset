@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d58b3e420fa1c894bb5c4e493c0cd550, type: 3}
+  m_Name: Laser
+  m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.WeaponDefinition
+  DisplayName: Laser
+  FireRate: 12
+  Damage: 1.5
+  DamageType: 1
+  Range: 45
+  SpreadDegrees: 0
+  TracerColor: {r: 1, g: 0.25, b: 0.55, a: 1}

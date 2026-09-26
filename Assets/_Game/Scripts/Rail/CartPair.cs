@@ -50,6 +50,9 @@ namespace SIHKH.Rail
         public float SnapStretch => _snapStretch;
         public bool Snapped => _snapped.Value;
 
+        /// <summary>Server only. False until the carts have been put on the rail on the first tick.</summary>
+        public bool Placed => _placed;
+
         private float RailLength => _cartA.RailLength;
 
         /// <summary>
