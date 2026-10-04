@@ -45,6 +45,7 @@ namespace SIHKH.Weapons
         private InputAction _interactAction;
         private InputAction _throwAction;
         private InputAction _swapAction;
+        private InputAction _reloadAction;
         private float _ownerNextShot;
         private float _serverNextShot;
 
@@ -104,6 +105,7 @@ namespace SIHKH.Weapons
                 _interactAction = actions.FindAction("Player/Interact");
                 _throwAction = actions.FindAction("Player/Throw");
                 _swapAction = actions.FindAction("Player/Swap");
+                _reloadAction = actions.FindAction("Player/Reload");
             }
         }
 
@@ -126,9 +128,19 @@ namespace SIHKH.Weapons
             if (_swapAction.WasPressedThisFrame()) CycleSelection();
             ReadNumberKeys();
 
+            OneOffWeapon selected = SelectedOneOff;
+            if (_reloadAction.WasPressedThisFrame() && selected != null) ReloadRpc(_selectedSlot.Value);
+
             if (_attackAction.IsPressed() && Time.time >= _ownerNextShot)
             {
                 _ownerNextShot = Time.time + Current.SecondsBetweenShots;
+
+                // Empty gun: pulling the trigger starts the reload instead of a shot.
+                if (selected != null && !Current.ThrowToAttack && !selected.CanFire)
+                {
+                    if (!selected.IsReloading) ReloadRpc(_selectedSlot.Value);
+                    return;
+                }
                 Fire();
             }
         }
@@ -239,11 +251,22 @@ namespace SIHKH.Weapons
         }
 
         [Rpc(SendTo.Server)]
+        private void ReloadRpc(int slot)
+        {
+            OneOffWeapon.HeldIn(OwnerClientId, slot)?.BeginReload();
+        }
+
+        [Rpc(SendTo.Server)]
         private void FireRpc(Vector3 origin, Vector3 direction, RpcParams rpc = default)
         {
             WeaponDefinition weapon = Current;
             if ((origin - _aimOrigin.position).sqrMagnitude > MaxAimOriginError * MaxAimOriginError) return;
             if (Time.time < _serverNextShot - RateTolerance) return;
+
+            // The server spends the ammo; the client only asked.
+            OneOffWeapon selected = SelectedOneOff;
+            if (selected != null && !selected.TryConsumeAmmo()) return;
+
             _serverNextShot = Time.time + weapon.SecondsBetweenShots;
 
             direction.Normalize();

@@ -104,8 +104,22 @@ namespace SIHKH.UI
                 var def = _weapon.SlotDefinition(slot);
                 bool selected = slot == _weapon.SelectedSlot;
                 string name = def != null ? def.DisplayName : "—";
+
+                // Ammo readout for one-offs with a magazine; reload shows as a bar of blocks.
+                string ammo = "";
+                if (slot > 0 && def != null && !def.HasInfiniteAmmo)
+                {
+                    var item = OneOffWeapon.HeldIn(_weapon.OwnerClientId, slot);
+                    if (item != null)
+                    {
+                        ammo = item.IsReloading
+                            ? "  RELOADING " + new string('▮', Mathf.RoundToInt(item.ReloadProgress * 8f)).PadRight(8, '▯')
+                            : $"  {item.Ammo}/{item.Magazine}" + (item.Ammo == 0 ? "  (R)" : "");
+                    }
+                }
+
                 style.normal.textColor = selected ? Color.yellow : (def != null ? Color.white : new Color(1f, 1f, 1f, 0.4f));
-                GUI.Label(new Rect(16, y + 26f * slot, 400, 26), $"{(selected ? ">" : " ")} {slot + 1}  {name}", style);
+                GUI.Label(new Rect(16, y + 26f * slot, 500, 26), $"{(selected ? ">" : " ")} {slot + 1}  {name}{ammo}", style);
             }
             style.normal.textColor = Color.white;
         }

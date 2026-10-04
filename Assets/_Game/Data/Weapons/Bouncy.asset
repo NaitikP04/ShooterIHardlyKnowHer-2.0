@@ -18,6 +18,8 @@ MonoBehaviour:
   DamageType: 0
   Range: 60
   SpreadDegrees: 0
+  MagazineSize: 6
+  ReloadSeconds: 1.8
   ThrowToAttack: 0
   BoomerangCurve: 0.3
   BoomerangSeconds: 2.4

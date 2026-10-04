@@ -18,4 +18,14 @@ MonoBehaviour:
   DamageType: 1
   Range: 45
   SpreadDegrees: 0
+  MagazineSize: 40
+  ReloadSeconds: 2
+  ThrowToAttack: 0
+  BoomerangCurve: 0.3
+  BoomerangSeconds: 2.4
+  ProjectilePrefab: {fileID: 0}
+  ProjectileSpeed: 22
+  Bounces: 0
+  Restitution: 0.9
+  GravityScale: 1
   TracerColor: {r: 1, g: 0.25, b: 0.55, a: 1}

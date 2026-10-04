@@ -93,6 +93,12 @@ namespace SIHKH.Weapons
         private readonly NetworkVariable<ThrowData> _throw = new(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // Ammo belongs to the item: a half-empty gun thrown across arrives half-empty.
+        private readonly NetworkVariable<int> _ammo = new(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<double> _reloadEndTime = new(
+            0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
         [Header("Boomerang attack")]
         [SerializeField, Min(0.05f)] private float _cutRadius = 0.6f;
 
@@ -111,6 +117,40 @@ namespace SIHKH.Weapons
         public ulong Holder => _holder.Value;
         public int Slot => _slot.Value;
         public bool IsHeld => _state.Value == State.Held;
+
+        // ---- Ammo (same answer on every peer) ----------------------------------------
+        public int Ammo => _ammo.Value;
+        public int Magazine => _definition.MagazineSize;
+        public bool IsReloading => _reloadEndTime.Value > 0d && NetworkManager.ServerTime.Time < _reloadEndTime.Value;
+        public float ReloadProgress => IsReloading
+            ? 1f - Mathf.Clamp01((float)(_reloadEndTime.Value - NetworkManager.ServerTime.Time) / _definition.ReloadSeconds)
+            : 0f;
+        public bool CanFire => _definition.HasInfiniteAmmo || (!IsReloading && _ammo.Value > 0);
+
+        /// <summary>Server only. Spends one shot; false if empty or mid-reload.</summary>
+        public bool TryConsumeAmmo()
+        {
+            if (_definition.HasInfiniteAmmo) return true;
+            if (IsReloading || _ammo.Value <= 0) return false;
+            _ammo.Value--;
+            return true;
+        }
+
+        /// <summary>Server only. Unlimited reloads; just time.</summary>
+        public void BeginReload()
+        {
+            if (_definition.HasInfiniteAmmo || IsReloading || _ammo.Value >= Magazine) return;
+            _reloadEndTime.Value = NetworkManager.ServerTime.Time + _definition.ReloadSeconds;
+        }
+
+        private void ServerTickReload()
+        {
+            if (_reloadEndTime.Value > 0d && NetworkManager.ServerTime.Time >= _reloadEndTime.Value)
+            {
+                _ammo.Value = Magazine;
+                _reloadEndTime.Value = 0d;
+            }
+        }
 
         // ---- Queries (same answer on every peer) ---------------------------------------
 
@@ -176,6 +216,7 @@ namespace SIHKH.Weapons
         public override void OnNetworkSpawn()
         {
             All.Add(this);
+            if (IsServer) _ammo.Value = _definition.MagazineSize;
             _renderers = GetComponentsInChildren<Renderer>();
             var block = new MaterialPropertyBlock();
             block.SetColor(BaseColorId, _definition.TracerColor);
@@ -248,6 +289,7 @@ namespace SIHKH.Weapons
             _lastServerPosition = origin;
             _onReturnLeg = false;
             _cutThisLeg.Clear();
+            _reloadEndTime.Value = 0d; // you can't reload a gun that's in the air
             _holder.Value = ulong.MaxValue;
             _slot.Value = 0;
             _state.Value = State.InFlight;
@@ -349,6 +391,7 @@ namespace SIHKH.Weapons
         private void Update()
         {
             if (!IsSpawned) return;
+            if (IsServer) ServerTickReload();
 
             switch (_state.Value)
             {

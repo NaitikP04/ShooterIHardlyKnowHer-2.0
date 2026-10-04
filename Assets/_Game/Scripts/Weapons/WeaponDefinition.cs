@@ -20,6 +20,10 @@ namespace SIHKH.Weapons
         [Min(1f), Tooltip("Metres a hitscan shot travels")] public float Range = 60f;
         [Range(0f, 10f), Tooltip("Cone half-angle of random spread, degrees")] public float SpreadDegrees = 0.5f;
 
+        [Header("Ammo (0 magazine = infinite)")]
+        [Min(0), Tooltip("Shots per magazine. 0 = never runs out")] public int MagazineSize = 0;
+        [Min(0.1f)] public float ReloadSeconds = 2f;
+
         [Header("Thrown attack (boomerang-style)")]
         [Tooltip("Firing throws the weapon itself along an out-and-back path instead of shooting")]
         public bool ThrowToAttack = false;
@@ -37,6 +41,7 @@ namespace SIHKH.Weapons
         public Color TracerColor = new(1f, 0.9f, 0.3f);
 
         public bool IsHitscan => ProjectilePrefab == null;
+        public bool HasInfiniteAmmo => MagazineSize <= 0;
         public float SecondsBetweenShots => 1f / FireRate;
     }
 }
