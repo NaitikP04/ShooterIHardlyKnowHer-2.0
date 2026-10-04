@@ -1,28 +1,30 @@
 using SIHKH.Core;
 using SIHKH.Player;
+using SIHKH.UI;
 using Unity.Netcode;
 using UnityEngine;
 
 namespace SIHKH.Enemies
 {
     /// <summary>
-    /// A walking cube, for now. The server picks the nearest player, walks straight at
-    /// them, and hits them on arrival. Position reaches clients through NetworkTransform;
-    /// health through the Health component. Dying means despawning.
+    /// One enemy. The server picks the nearest player, moves at them (walking, flying,
+    /// weaving, per its definition), and hits them on arrival. Position reaches clients
+    /// through NetworkTransform; health through the Health component, which this enemy
+    /// gives a resistance modifier. Dying means despawning.
     /// </summary>
     [RequireComponent(typeof(NetworkObject), typeof(Health))]
     public class Enemy : NetworkBehaviour
     {
         [SerializeField] private EnemyDefinition _definition;
+        [SerializeField, Min(0.01f)] private float _hitFlashSeconds = 0.12f;
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-
-        [SerializeField, Min(0.01f)] private float _hitFlashSeconds = 0.12f;
 
         private Health _health;
         private PlayerRig _target;
         private float _nextAttackTime;
         private float _flashUntil;
+        private float _weavePhase;
         private Renderer[] _renderers;
 
         public EnemyDefinition Definition => _definition;
@@ -31,6 +33,7 @@ namespace SIHKH.Enemies
         {
             _health = GetComponent<Health>();
             _health.Configure(_definition.MaxHealth);
+            _weavePhase = Random.Range(0f, Mathf.PI * 2f); // so a pack doesn't weave in lockstep
         }
 
         public override void OnNetworkSpawn()
@@ -38,22 +41,32 @@ namespace SIHKH.Enemies
             _renderers = GetComponentsInChildren<Renderer>();
             Tint(_definition.Tint);
 
-            // Everyone sees the health drop, so everyone can flash. No extra RPC needed.
-            _health.Changed += OnHealthChanged;
-            if (IsServer) _health.Died += OnDied;
+            _health.Damaged += OnDamaged;
+            if (IsServer)
+            {
+                _health.Modifier = info => _definition.MultiplierFor(info.Type);
+                _health.Died += OnDied;
+            }
         }
 
         public override void OnNetworkDespawn()
         {
-            _health.Changed -= OnHealthChanged;
-            if (IsServer) _health.Died -= OnDied;
+            _health.Damaged -= OnDamaged;
+            if (IsServer)
+            {
+                _health.Modifier = null;
+                _health.Died -= OnDied;
+            }
         }
 
-        private void OnHealthChanged(float previous, float current)
+        private void OnDamaged(Vector3 point, float applied, float multiplier)
         {
-            if (current >= previous) return;
+            DamageNumber.Spawn(point, applied, multiplier);
             _flashUntil = Time.time + _hitFlashSeconds;
-            Tint(Color.white);
+            // The flash echoes the number: dim for resisted, white for normal, gold for a weak spot.
+            Tint(multiplier < 0.95f ? new Color(0.45f, 0.45f, 0.45f)
+               : multiplier > 1.05f ? new Color(1f, 0.85f, 0.2f)
+               : Color.white);
         }
 
         private void Tint(Color color)
@@ -82,9 +95,7 @@ namespace SIHKH.Enemies
 
             if (distance > _definition.ReachDistance)
             {
-                Vector3 step = toTarget / distance * (_definition.MoveSpeed * Time.deltaTime);
-                transform.position += step;
-                transform.rotation = Quaternion.LookRotation(toTarget);
+                Move(toTarget / distance);
                 return;
             }
 
@@ -98,6 +109,27 @@ namespace SIHKH.Enemies
                         NetworkManager.ServerClientId));
                 }
             }
+        }
+
+        private void Move(Vector3 forward)
+        {
+            Vector3 step = forward * (_definition.MoveSpeed * Time.deltaTime);
+
+            if (_definition.WeaveAmplitude > 0f)
+            {
+                // Sideways sine on top of the approach: erratic without being random, so the
+                // server stays the only simulation and clients just see the result.
+                Vector3 right = Vector3.Cross(Vector3.up, forward);
+                float phase = (Time.time * _definition.WeaveFrequency + _weavePhase) * Mathf.PI * 2f;
+                step += right * (Mathf.Cos(phase) * _definition.WeaveAmplitude * _definition.WeaveFrequency * Mathf.PI * 2f * Time.deltaTime);
+            }
+
+            Vector3 next = transform.position + step;
+            float groundY = GetComponent<Collider>() is { } c ? c.bounds.extents.y : 0.5f;
+            next.y = _definition.FlyHeight > 0f ? _definition.FlyHeight : groundY;
+
+            transform.position = next;
+            transform.rotation = Quaternion.LookRotation(forward);
         }
 
         private PlayerRig FindNearestPlayer()
@@ -118,7 +150,7 @@ namespace SIHKH.Enemies
 
         private void OnDied(DamageInfo killingBlow)
         {
-            // Later: ragdoll + drop roll here. For now the cube just stops existing.
+            // Later: ragdoll + drop roll here. For now it just stops existing.
             NetworkObject.Despawn(destroy: true);
         }
     }

@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 88912a860969bac459630c7ec646d7fd, type: 3}
-  m_Name: Grunt
+  m_Name: Swarmer
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Enemies.EnemyDefinition
-  DisplayName: Grunt
-  Tint: {r: 0.7, g: 0.2, b: 0.25, a: 1}
-  MaxHealth: 10
-  MoveSpeed: 2
+  DisplayName: Swarmer
+  Tint: {r: 0.95, g: 0.8, b: 0.2, a: 1}
+  MaxHealth: 4
+  MoveSpeed: 4.5
   FlyHeight: 0
-  WeaveAmplitude: 0
-  WeaveFrequency: 1
-  ReachDistance: 1.8
-  AttackDamage: 1
-  AttackInterval: 1
-  PackSize: 1
+  WeaveAmplitude: 0.6
+  WeaveFrequency: 1.2
+  ReachDistance: 1.2
+  AttackDamage: 0.5
+  AttackInterval: 0.6
+  PackSize: 4
   KineticMultiplier: 1
-  EnergyMultiplier: 1
-  BluntMultiplier: 1
+  EnergyMultiplier: 0.7
+  BluntMultiplier: 2.5

@@ -3769,6 +3769,7 @@ GameObject:
   - component: {fileID: 1680248351}
   - component: {fileID: 1680248350}
   - component: {fileID: 1680248352}
+  - component: {fileID: 1680248353}
   m_Layer: 0
   m_Name: EnemySpawner
   m_TagString: Untagged
@@ -3831,11 +3832,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Waves.EnemySpawner
   ShowTopMostFoldoutHeaderGroup: 1
-  _enemyPrefab: {fileID: 5322219361276829273, guid: 404972c6bfcb8be4ab7c110d63fbd3e6, type: 3}
+  _enemyPrefabs:
+  - {fileID: 5322219361276829273, guid: 404972c6bfcb8be4ab7c110d63fbd3e6, type: 3}
+  - {fileID: 7584878502212556374, guid: 3618373eae15dce4b89dfb4402ecf4d2, type: 3}
+  - {fileID: 6196587893535038833, guid: 2f0fc5605a799924d9baa1e8ee80b6e5, type: 3}
+  - {fileID: 2038383218140172349, guid: 165b468166eb2064286eb6b85193879a, type: 3}
   _interval: 5
   _maxAlive: 5
   _spawnRadius: 35
   _autoSpawn: 0
+--- !u!114 &1680248353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1680248349}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f69a1f7f2889992459cb2a7fc0d13a44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Waves.SandboxSpawnKeys
+  _distance: 15
 --- !u!1 &1780017204
 GameObject:
   m_ObjectHideFlags: 0
