@@ -79,8 +79,8 @@ MonoBehaviour:
   _throwSpeed: 15
   _upwardBias: 0.45
   _throwerGraceSeconds: 0.4
-  _catchRadius: 2.2
-  _catchLeadSeconds: 0.7
+  _catchRadius: 1.8
+  _catchLeadSeconds: 0.45
   _catchFacingDot: 0.3
   _bonkRadius: 0.9
   _bonkDamage: 2

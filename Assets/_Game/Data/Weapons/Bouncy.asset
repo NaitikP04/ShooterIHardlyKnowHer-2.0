@@ -22,8 +22,8 @@ MonoBehaviour:
   BoomerangCurve: 0.3
   BoomerangSeconds: 2.4
   ProjectilePrefab: {fileID: 1461866579261846346, guid: 41f212af90623d342b0bd4324f388628, type: 3}
-  ProjectileSpeed: 45
+  ProjectileSpeed: 60
   Bounces: 10
-  Restitution: 0.92
-  GravityScale: 0.35
+  Restitution: 0.9
+  GravityScale: 1
   TracerColor: {r: 0.3, g: 0.95, b: 1, a: 1}
