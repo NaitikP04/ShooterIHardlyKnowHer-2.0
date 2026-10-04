@@ -29,6 +29,11 @@ namespace SIHKH.Enemies
         [Header("Spawning")]
         [Min(1), Tooltip("How many appear together")] public int PackSize = 1;
 
+        [Header("Drop")]
+        [Tooltip("The one-off this enemy drops on death: ideally the weapon that counters it")]
+        public Weapons.OneOffWeapon DropPrefab;
+        [Range(0f, 1f)] public float DropChance = 1f;
+
         // Damage multipliers. 1 = normal, below 1 shrugs it off, above 1 is a weak spot.
         // This is what makes a weapon "the" answer to an enemy.
         [Header("Resistances (damage multipliers)")]

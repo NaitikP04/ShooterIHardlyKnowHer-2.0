@@ -54,6 +54,46 @@ namespace SIHKH.UI
                 DrawSlots(style);
                 DrawInteractPrompt();
             }
+
+            DrawRun();
+        }
+
+        private void DrawRun()
+        {
+            var director = Waves.WaveDirector.Current;
+            if (director == null) return;
+
+            var style = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
+            style.normal.textColor = Color.white;
+
+            // Team health bar, top centre.
+            float w = 320f, h = 14f, x = Screen.width * 0.5f - w * 0.5f, y = 14f;
+            float frac = director.TeamMaxHealth > 0f ? director.TeamHealth / director.TeamMaxHealth : 0f;
+            Color prev = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.5f);
+            GUI.DrawTexture(new Rect(x - 2, y - 2, w + 4, h + 4), Texture2D.whiteTexture);
+            GUI.color = Color.Lerp(new Color(0.9f, 0.2f, 0.2f), new Color(0.3f, 0.85f, 0.4f), frac);
+            GUI.DrawTexture(new Rect(x, y, w * frac, h), Texture2D.whiteTexture);
+            GUI.color = prev;
+
+            string line = director.CurrentPhase switch
+            {
+                Waves.WaveDirector.Phase.Idle => $"Run starts in {director.PhaseSecondsLeft:0}",
+                Waves.WaveDirector.Phase.Spawning or Waves.WaveDirector.Phase.Fighting => $"WAVE {director.Wave}   enemies {director.EnemiesAlive}",
+                Waves.WaveDirector.Phase.Breather => $"Wave {director.Wave} cleared   next in {director.PhaseSecondsLeft:0}",
+                _ => "",
+            };
+            GUI.Label(new Rect(0, y + h + 4, Screen.width, 28), line, style);
+
+            if (director.CurrentPhase == Waves.WaveDirector.Phase.RunOver)
+            {
+                var big = new GUIStyle(style) { fontSize = 44 };
+                big.normal.textColor = new Color(1f, 0.35f, 0.3f);
+                GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 60), "RUN OVER", big);
+                var body = new GUIStyle(style) { fontSize = 22 };
+                GUI.Label(new Rect(0, Screen.height * 0.3f + 70, Screen.width, 120),
+                    $"Reached wave {director.Wave}\nKills {director.Kills}   Times you shot each other {director.FriendlyFireHits}\n\nHost: press Enter to go again", body);
+            }
         }
 
         private void DrawDamageNumbers()

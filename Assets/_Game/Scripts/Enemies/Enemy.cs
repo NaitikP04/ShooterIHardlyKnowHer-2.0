@@ -18,6 +18,9 @@ namespace SIHKH.Enemies
         [SerializeField] private EnemyDefinition _definition;
         [SerializeField, Min(0.01f)] private float _hitFlashSeconds = 0.12f;
 
+        /// <summary>Server only. Any enemy died, with the killing blow. The wave director listens.</summary>
+        public static event System.Action<Enemy, DamageInfo> AnyDied;
+
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         private Health _health;
@@ -150,7 +153,9 @@ namespace SIHKH.Enemies
 
         private void OnDied(DamageInfo killingBlow)
         {
-            // Later: ragdoll + drop roll here. For now it just stops existing.
+            // Later: ragdoll here. For now it drops its weapon (if any) and stops existing.
+            Weapons.WeaponDrops.TryDrop(_definition, transform.position);
+            AnyDied?.Invoke(this, killingBlow);
             NetworkObject.Despawn(destroy: true);
         }
     }

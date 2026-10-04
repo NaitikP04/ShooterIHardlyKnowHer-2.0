@@ -29,6 +29,9 @@ namespace SIHKH.Core
         /// <summary>Everyone. A hit landed: where, how much after modifiers, and the multiplier used.</summary>
         public event Action<Vector3, float, float> Damaged;
 
+        /// <summary>Server only. Same hit, with the full DamageInfo (who did it) and the applied amount.</summary>
+        public event Action<DamageInfo, float> DamageApplied;
+
         /// <summary>Server only. Returns the multiplier to apply to incoming damage. Null = 1.</summary>
         public Func<DamageInfo, float> Modifier { get; set; }
 
@@ -57,6 +60,7 @@ namespace SIHKH.Core
 
             _current.Value = Mathf.Max(0f, _current.Value - applied);
             DamagedRpc(info.Point, applied, multiplier);
+            DamageApplied?.Invoke(info, applied);
             if (_current.Value <= 0f) Died?.Invoke(info);
         }
 

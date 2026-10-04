@@ -23,6 +23,8 @@ MonoBehaviour:
   AttackDamage: 3
   AttackInterval: 1.5
   PackSize: 1
+  DropPrefab: {fileID: 668950047532767350, guid: a1d326c020b9b7d4a9eebb7bbb478ac7, type: 3}
+  DropChance: 1
   KineticMultiplier: 0.3
   EnergyMultiplier: 2
   BluntMultiplier: 0.6

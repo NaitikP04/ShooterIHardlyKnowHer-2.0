@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 075746e7c9fe4aa49a644348582e2af5, type: 3}
+  m_Name: Wave04_Swarm
+  m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Waves.WaveDefinition
+  DisplayName: Wave04_Swarm
+  Entries:
+  - Prefab: {fileID: 6196587893535038833, guid: 2f0fc5605a799924d9baa1e8ee80b6e5, type: 3}
+    Count: 2
+    Interval: 4
+  - Prefab: {fileID: 2038383218140172349, guid: 165b468166eb2064286eb6b85193879a, type: 3}
+    Count: 2
+    Interval: 3
+  BreatherSeconds: 8
