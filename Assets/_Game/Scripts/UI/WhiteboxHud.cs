@@ -25,10 +25,16 @@ namespace SIHKH.UI
             _weapon = GetComponent<PlayerWeapon>();
         }
 
+        private void Update()
+        {
+            if (IsSpawned && IsOwner) DamageNumber.Tick(Time.deltaTime);
+        }
+
         private void OnGUI()
         {
             if (!IsSpawned || !IsOwner) return;
 
+            DrawDamageNumbers();
             DrawCrosshair();
 
             var style = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.LowerLeft };
@@ -40,6 +46,29 @@ namespace SIHKH.UI
             {
                 DrawSlots(style);
                 DrawInteractPrompt();
+            }
+        }
+
+        private void DrawDamageNumbers()
+        {
+            Camera cam = GetComponent<Player.PlayerRig>().Camera;
+            if (cam == null) return;
+
+            var style = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            foreach (var e in DamageNumber.Entries)
+            {
+                Vector3 screen = cam.WorldToScreenPoint(e.WorldPosition);
+                if (screen.z <= 0f) continue;
+
+                // Shrink with distance a little so far hits don't shout, and fade out.
+                float distanceScale = Mathf.Clamp(12f / Mathf.Max(screen.z, 1f), 0.6f, 1.4f);
+                style.fontSize = Mathf.RoundToInt(22f * e.Scale * distanceScale);
+                Color c = e.Color;
+                c.a = 1f - Mathf.Clamp01((e.Age - DamageNumber.Lifetime * 0.5f) / (DamageNumber.Lifetime * 0.5f));
+                style.normal.textColor = c;
+
+                var rect = new Rect(screen.x - 60f, Screen.height - screen.y - 16f, 120f, 32f);
+                GUI.Label(rect, e.Text, style);
             }
         }
 
