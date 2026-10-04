@@ -20,9 +20,19 @@ namespace SIHKH.Weapons
         [Min(1f), Tooltip("Metres a hitscan shot travels")] public float Range = 60f;
         [Range(0f, 10f), Tooltip("Cone half-angle of random spread, degrees")] public float SpreadDegrees = 0.5f;
 
-        [Header("Ammo (0 magazine = infinite)")]
-        [Min(0), Tooltip("Shots per magazine. 0 = never runs out")] public int MagazineSize = 0;
-        [Min(0.1f)] public float ReloadSeconds = 2f;
+        public enum AmmoKind { Infinite, Magazine, Heat }
+
+        [Header("Ammo")]
+        public AmmoKind Ammo = AmmoKind.Infinite;
+        [Min(1), Tooltip("Magazine: shots before a reload")] public int MagazineSize = 6;
+        [Min(0.1f), Tooltip("Magazine: reload time")] public float ReloadSeconds = 2f;
+
+        [Header("Heat (AmmoKind.Heat)")]
+        [Min(0.01f), Tooltip("Heat added per second of continuous fire (1 = overheat)")] public float HeatPerSecond = 0.33f;
+        [Min(0.01f), Tooltip("Heat removed per second while not firing")] public float CoolPerSecond = 0.5f;
+        [Min(0.1f), Tooltip("Forced vent after overheating")] public float OverheatLockSeconds = 2.5f;
+        [Min(0.1f), Tooltip("Manual vent (R) duration")] public float VentSeconds = 1f;
+        [Min(1f), Tooltip("Damage multiplier at the red line; cold is x1")] public float MaxHeatDamageMultiplier = 2.5f;
 
         [Header("Thrown attack (boomerang-style)")]
         [Tooltip("Firing throws the weapon itself along an out-and-back path instead of shooting")]
@@ -41,7 +51,8 @@ namespace SIHKH.Weapons
         public Color TracerColor = new(1f, 0.9f, 0.3f);
 
         public bool IsHitscan => ProjectilePrefab == null;
-        public bool HasInfiniteAmmo => MagazineSize <= 0;
+        public bool HasInfiniteAmmo => Ammo == AmmoKind.Infinite;
+        public bool UsesHeat => Ammo == AmmoKind.Heat;
         public float SecondsBetweenShots => 1f / FireRate;
     }
 }

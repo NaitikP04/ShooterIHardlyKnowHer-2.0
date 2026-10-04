@@ -99,6 +99,15 @@ namespace SIHKH.Weapons
         private readonly NetworkVariable<double> _reloadEndTime = new(
             0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        // Heat model: 0 cold .. 1 overheated. The lock covers both forced vents and manual ones.
+        private readonly NetworkVariable<float> _heat = new(
+            0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<double> _heatLockEndTime = new(
+            0d, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<bool> _overheated = new(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private double _lastShotTime;
+
         [Header("Boomerang attack")]
         [SerializeField, Min(0.05f)] private float _cutRadius = 0.6f;
 
@@ -125,30 +134,103 @@ namespace SIHKH.Weapons
         public float ReloadProgress => IsReloading
             ? 1f - Mathf.Clamp01((float)(_reloadEndTime.Value - NetworkManager.ServerTime.Time) / _definition.ReloadSeconds)
             : 0f;
-        public bool CanFire => _definition.HasInfiniteAmmo || (!IsReloading && _ammo.Value > 0);
+        // ---- Heat (same answer on every peer) ----------------------------------------
+        public float Heat => _heat.Value;
+        public bool IsHeatLocked => _heatLockEndTime.Value > 0d && NetworkManager.ServerTime.Time < _heatLockEndTime.Value;
+        /// <summary>True during a forced vent after redlining; false during a manual vent.</summary>
+        public bool IsOverheated => _overheated.Value && IsHeatLocked;
+        /// <summary>x1 cold .. MaxHeatDamageMultiplier at the red line. Hotter is deadlier.</summary>
+        public float HeatDamageMultiplier => _definition.UsesHeat
+            ? Mathf.Lerp(1f, _definition.MaxHeatDamageMultiplier, _heat.Value)
+            : 1f;
 
-        /// <summary>Server only. Spends one shot; false if empty or mid-reload.</summary>
+        public bool CanFire => _definition.Ammo switch
+        {
+            WeaponDefinition.AmmoKind.Infinite => true,
+            WeaponDefinition.AmmoKind.Magazine => !IsReloading && _ammo.Value > 0,
+            WeaponDefinition.AmmoKind.Heat => !IsHeatLocked,
+            _ => true,
+        };
+
+        /// <summary>Server only. Spends a shot (or adds heat); false if the weapon can't fire right now.</summary>
         public bool TryConsumeAmmo()
         {
-            if (_definition.HasInfiniteAmmo) return true;
-            if (IsReloading || _ammo.Value <= 0) return false;
-            _ammo.Value--;
-            return true;
+            switch (_definition.Ammo)
+            {
+                case WeaponDefinition.AmmoKind.Magazine:
+                    if (IsReloading || _ammo.Value <= 0) return false;
+                    _ammo.Value--;
+                    return true;
+
+                case WeaponDefinition.AmmoKind.Heat:
+                    if (IsHeatLocked) return false;
+                    _lastShotTime = NetworkManager.ServerTime.Time;
+                    float heat = _heat.Value + _definition.HeatPerSecond * _definition.SecondsBetweenShots;
+                    if (heat >= 1f)
+                    {
+                        // Redlined: the shot still fires (at full multiplier), then forced vent.
+                        _heat.Value = 1f;
+                        _overheated.Value = true;
+                        _heatLockEndTime.Value = NetworkManager.ServerTime.Time + _definition.OverheatLockSeconds;
+                    }
+                    else
+                    {
+                        _heat.Value = heat;
+                    }
+                    return true;
+
+                default:
+                    return true;
+            }
         }
 
-        /// <summary>Server only. Unlimited reloads; just time.</summary>
+        /// <summary>Server only. R: reload a magazine, or vent a heat weapon early.</summary>
         public void BeginReload()
         {
-            if (_definition.HasInfiniteAmmo || IsReloading || _ammo.Value >= Magazine) return;
-            _reloadEndTime.Value = NetworkManager.ServerTime.Time + _definition.ReloadSeconds;
+            switch (_definition.Ammo)
+            {
+                case WeaponDefinition.AmmoKind.Magazine:
+                    if (IsReloading || _ammo.Value >= Magazine) return;
+                    _reloadEndTime.Value = NetworkManager.ServerTime.Time + _definition.ReloadSeconds;
+                    break;
+
+                case WeaponDefinition.AmmoKind.Heat:
+                    if (IsHeatLocked || _heat.Value <= 0.01f) return;
+                    _overheated.Value = false;
+                    _heatLockEndTime.Value = NetworkManager.ServerTime.Time + _definition.VentSeconds;
+                    break;
+            }
         }
 
         private void ServerTickReload()
         {
-            if (_reloadEndTime.Value > 0d && NetworkManager.ServerTime.Time >= _reloadEndTime.Value)
+            double now = NetworkManager.ServerTime.Time;
+
+            if (_reloadEndTime.Value > 0d && now >= _reloadEndTime.Value)
             {
                 _ammo.Value = Magazine;
                 _reloadEndTime.Value = 0d;
+            }
+
+            if (!_definition.UsesHeat) return;
+
+            if (_heatLockEndTime.Value > 0d)
+            {
+                // Venting: heat drains to zero over the lock, then the lock lifts.
+                float lockLength = _overheated.Value ? _definition.OverheatLockSeconds : _definition.VentSeconds;
+                float remaining = (float)(_heatLockEndTime.Value - now);
+                _heat.Value = Mathf.Clamp01(remaining / lockLength) * (_overheated.Value ? 1f : _heat.Value);
+                if (now >= _heatLockEndTime.Value)
+                {
+                    _heat.Value = 0f;
+                    _heatLockEndTime.Value = 0d;
+                    _overheated.Value = false;
+                }
+            }
+            else if (_heat.Value > 0f && now - _lastShotTime > 0.15d)
+            {
+                // Finger off the trigger: passive cooling.
+                _heat.Value = Mathf.Max(0f, _heat.Value - _definition.CoolPerSecond * Time.deltaTime);
             }
         }
 
@@ -216,7 +298,7 @@ namespace SIHKH.Weapons
         public override void OnNetworkSpawn()
         {
             All.Add(this);
-            if (IsServer) _ammo.Value = _definition.MagazineSize;
+            if (IsServer && _definition.Ammo == WeaponDefinition.AmmoKind.Magazine) _ammo.Value = _definition.MagazineSize;
             _renderers = GetComponentsInChildren<Renderer>();
             var block = new MaterialPropertyBlock();
             block.SetColor(BaseColorId, _definition.TracerColor);
@@ -289,7 +371,7 @@ namespace SIHKH.Weapons
             _lastServerPosition = origin;
             _onReturnLeg = false;
             _cutThisLeg.Clear();
-            _reloadEndTime.Value = 0d; // you can't reload a gun that's in the air
+            _reloadEndTime.Value = 0d; // you can't reload a gun that's in the air (heat keeps cooling on its own)
             _holder.Value = ulong.MaxValue;
             _slot.Value = 0;
             _state.Value = State.InFlight;

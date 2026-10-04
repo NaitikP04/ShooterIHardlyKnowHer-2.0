@@ -105,12 +105,18 @@ namespace SIHKH.UI
                 bool selected = slot == _weapon.SelectedSlot;
                 string name = def != null ? def.DisplayName : "—";
 
-                // Ammo readout for one-offs with a magazine; reload shows as a bar of blocks.
+                // Ammo readout: magazine count + reload bar, or heat bar + state for heat weapons.
                 string ammo = "";
                 if (slot > 0 && def != null && !def.HasInfiniteAmmo)
                 {
                     var item = OneOffWeapon.HeldIn(_weapon.OwnerClientId, slot);
-                    if (item != null)
+                    if (item != null && def.UsesHeat)
+                    {
+                        string bar = new string('▮', Mathf.RoundToInt(item.Heat * 10f)).PadRight(10, '▯');
+                        string state = item.IsOverheated ? "  OVERHEATED" : item.IsHeatLocked ? "  VENTING" : item.Heat > 0.8f ? "  !" : "";
+                        ammo = $"  HEAT {bar}{state}";
+                    }
+                    else if (item != null)
                     {
                         ammo = item.IsReloading
                             ? "  RELOADING " + new string('▮', Mathf.RoundToInt(item.ReloadProgress * 8f)).PadRight(8, '▯')

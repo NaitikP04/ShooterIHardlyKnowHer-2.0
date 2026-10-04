@@ -263,11 +263,17 @@ namespace SIHKH.Weapons
             if ((origin - _aimOrigin.position).sqrMagnitude > MaxAimOriginError * MaxAimOriginError) return;
             if (Time.time < _serverNextShot - RateTolerance) return;
 
-            // The server spends the ammo; the client only asked.
+            // The server spends the ammo; the client only asked. Heat weapons hit harder the
+            // hotter they are, so read the multiplier before this shot's heat is added.
             OneOffWeapon selected = SelectedOneOff;
+            float heatMultiplier = selected != null ? selected.HeatDamageMultiplier : 1f;
+            float heatForColor = selected != null ? selected.Heat : 0f;
             if (selected != null && !selected.TryConsumeAmmo()) return;
 
             _serverNextShot = Time.time + weapon.SecondsBetweenShots;
+            float damage = weapon.Damage * heatMultiplier;
+            // Beam goes white-hot as the heat climbs.
+            Color shotColor = Color.Lerp(weapon.TracerColor, Color.white, heatForColor * 0.85f);
 
             direction.Normalize();
 
@@ -297,13 +303,13 @@ namespace SIHKH.Weapons
                 if (!self && hit.collider.GetComponentInParent<IDamageable>() is { } target)
                 {
                     target.TakeDamage(new DamageInfo(
-                        weapon.Damage, weapon.DamageType, hit.point, direction, rpc.Receive.SenderClientId));
+                        damage, weapon.DamageType, hit.point, direction, rpc.Receive.SenderClientId));
                 }
             }
 
             // The server's copy of the gun is where everyone else sees it, so its muzzle is
             // the honest place for the tracer to start.
-            ShotFxRpc(_muzzle.position, end, hitSomething, weapon.TracerColor);
+            ShotFxRpc(_muzzle.position, end, hitSomething, shotColor);
         }
 
         [Rpc(SendTo.Everyone)]

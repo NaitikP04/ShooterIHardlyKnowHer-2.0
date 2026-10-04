@@ -18,8 +18,14 @@ MonoBehaviour:
   DamageType: 0
   Range: 60
   SpreadDegrees: 0
+  Ammo: 1
   MagazineSize: 6
   ReloadSeconds: 1.8
+  HeatPerSecond: 0.33
+  CoolPerSecond: 0.5
+  OverheatLockSeconds: 2.5
+  VentSeconds: 1
+  MaxHeatDamageMultiplier: 2.5
   ThrowToAttack: 0
   BoomerangCurve: 0.3
   BoomerangSeconds: 2.4

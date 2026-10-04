@@ -14,12 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.WeaponDefinition
   DisplayName: Laser
   FireRate: 12
-  Damage: 1.5
+  Damage: 1
   DamageType: 1
   Range: 45
   SpreadDegrees: 0
+  Ammo: 2
   MagazineSize: 40
   ReloadSeconds: 2
+  HeatPerSecond: 0.33
+  CoolPerSecond: 0.35
+  OverheatLockSeconds: 2.5
+  VentSeconds: 1
+  MaxHeatDamageMultiplier: 2.5
   ThrowToAttack: 0
   BoomerangCurve: 0.3
   BoomerangSeconds: 2.4
