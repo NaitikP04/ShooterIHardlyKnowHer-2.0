@@ -212,6 +212,17 @@ namespace SIHKH.Weapons
             _serverNextShot = Time.time + weapon.SecondsBetweenShots;
 
             direction.Normalize();
+
+            if (!weapon.IsHitscan)
+            {
+                // Projectile weapons: spawn a server-simulated projectile and let it do the hitting.
+                Projectile projectile = Instantiate(weapon.ProjectilePrefab);
+                projectile.Configure(weapon, rpc.Receive.SenderClientId, NetworkObject);
+                projectile.Launch(origin + direction * 0.6f, direction * weapon.ProjectileSpeed);
+                projectile.NetworkObject.Spawn(destroyWithScene: true);
+                return;
+            }
+
             Vector3 end = origin + direction * weapon.Range;
             bool hitSomething = false;
 

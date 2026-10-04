@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d58b3e420fa1c894bb5c4e493c0cd550, type: 3}
+  m_Name: Bouncy
+  m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.WeaponDefinition
+  DisplayName: Bouncy
+  FireRate: 1.5
+  Damage: 5
+  DamageType: 0
+  Range: 60
+  SpreadDegrees: 0
+  ProjectilePrefab: {fileID: 1461866579261846346, guid: 41f212af90623d342b0bd4324f388628, type: 3}
+  ProjectileSpeed: 20
+  Bounces: 7
+  Restitution: 0.7
+  GravityScale: 1.6
+  TracerColor: {r: 0.3, g: 0.95, b: 1, a: 1}
