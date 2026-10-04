@@ -84,6 +84,10 @@ namespace SIHKH.Weapons
             ulong.MaxValue, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<int> _slot = new(
             0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // The slot this item was first put in. It goes back there whenever that's free, so
+        // "3 is the boomerang" stays true across throws and catches.
+        private readonly NetworkVariable<int> _preferredSlot = new(
+            0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<Vector3> _groundPosition = new(
             Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private readonly NetworkVariable<ThrowData> _throw = new(
@@ -91,6 +95,10 @@ namespace SIHKH.Weapons
 
         [Header("Boomerang attack")]
         [SerializeField, Min(0.05f)] private float _cutRadius = 0.6f;
+
+        [Header("Thrown at an enemy")]
+        [SerializeField, Min(0f), Tooltip("A hand-tossed weapon that hits an enemy does this much Blunt and drops there")]
+        private float _throwBonkDamage = 6f;
 
         private Renderer[] _renderers;
         private float _groundedSince;
@@ -136,6 +144,18 @@ namespace SIHKH.Weapons
             return -1;
         }
 
+        /// <summary>
+        /// Any peer. The slot this item would land in for <paramref name="clientId"/>: its
+        /// remembered slot if free, else the first free one, else -1. Same answer everywhere,
+        /// so the owner can predict what the server will do.
+        /// </summary>
+        public int SlotFor(ulong clientId, int maxSlots)
+        {
+            int preferred = _preferredSlot.Value;
+            if (preferred >= 1 && preferred <= maxSlots && HeldIn(clientId, preferred) == null) return preferred;
+            return FirstFreeSlot(clientId, maxSlots);
+        }
+
         public static OneOffWeapon NearestOnGround(Vector3 position, float maxDistance)
         {
             OneOffWeapon best = null;
@@ -177,12 +197,14 @@ namespace SIHKH.Weapons
             _groundedSince = Time.time;
         }
 
-        /// <summary>Server only. Succeeds if the item is on the ground within reach of the player.</summary>
-        public bool TryPickUp(PlayerRig by, int slot)
+        /// <summary>Server only. Succeeds if the item is on the ground within reach and a slot is free.</summary>
+        public bool TryPickUp(PlayerRig by, int maxSlots)
         {
-            if (_state.Value != State.OnGround || slot < 1) return false;
+            if (_state.Value != State.OnGround) return false;
             if ((by.transform.position - _groundPosition.Value).sqrMagnitude > _pickupRadius * _pickupRadius) return false;
 
+            int slot = SlotFor(by.OwnerClientId, maxSlots);
+            if (slot < 1) return false;
             Hold(by.OwnerClientId, slot);
             return true;
         }
@@ -259,10 +281,12 @@ namespace SIHKH.Weapons
             return false;
         }
 
-        /// <summary>Server only. The player pressed catch; succeed if the arc really is within reach.</summary>
-        public bool TryCatch(PlayerRig by, int slot)
+        /// <summary>Server only. The player pressed catch; succeed if the arc really is within reach and a slot is free.</summary>
+        public bool TryCatch(PlayerRig by, int maxSlots)
         {
-            if (slot < 1 || !IsCatchableBy(by)) return false;
+            if (!IsCatchableBy(by)) return false;
+            int slot = SlotFor(by.OwnerClientId, maxSlots);
+            if (slot < 1) return false;
             Hold(by.OwnerClientId, slot);
             return true;
         }
@@ -271,6 +295,7 @@ namespace SIHKH.Weapons
         {
             _holder.Value = clientId;
             _slot.Value = slot;
+            if (_preferredSlot.Value == 0) _preferredSlot.Value = slot;
             _state.Value = State.Held;
         }
 
@@ -366,6 +391,10 @@ namespace SIHKH.Weapons
             {
                 CutEnemiesAlongPath(position, velocity, t, age);
             }
+            else if (BonkEnemyAlongPath(position, velocity, t))
+            {
+                return; // it hit something and dropped there
+            }
 
             // Catching is a button press (TryCatch). Here we only resolve what happens when
             // nobody pressed it in time: the item reaches a head and bonks it.
@@ -393,6 +422,26 @@ namespace SIHKH.Weapons
                 // A boomerang nobody caught comes to rest where it was thrown from.
                 Drop(position);
             }
+        }
+
+        /// <summary>
+        /// Hand-toss only. If the arc passes through an enemy, clonk it and drop right there.
+        /// A thrown gun is a blunt instrument: same damage whatever the weapon.
+        /// </summary>
+        private bool BonkEnemyAlongPath(Vector3 position, Vector3 velocity, ThrowData t)
+        {
+            Vector3 travel = position - _lastServerPosition;
+            float distance = travel.magnitude;
+            _lastServerPosition = position;
+            if (distance <= 0.0001f) return false;
+
+            if (!Physics.SphereCast(position - travel, _cutRadius, travel / distance, out RaycastHit hit, distance, ~0, QueryTriggerInteraction.Ignore)) return false;
+            if (hit.collider.GetComponentInParent<PlayerRig>() != null) return false;
+            if (hit.collider.GetComponentInParent<IDamageable>() is not { } target) return false;
+
+            target.TakeDamage(new DamageInfo(_throwBonkDamage, DamageType.Blunt, hit.point, velocity.normalized, t.Thrower));
+            Drop(hit.point - velocity.normalized * 0.5f);
+            return true;
         }
 
         /// <summary>

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Enemies.EnemyDefinition
   DisplayName: Tank
   Tint: {r: 0.2, g: 0.45, b: 0.25, a: 1}
-  MaxHealth: 45
+  MaxHealth: 35
   MoveSpeed: 1.1
   FlyHeight: 0
   WeaveAmplitude: 0

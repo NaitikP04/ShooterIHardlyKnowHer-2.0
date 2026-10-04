@@ -42,6 +42,13 @@ namespace SIHKH.UI
             string hp = _health != null ? $"HP {_health.Current:0}/{_health.Max:0}" : "";
             GUI.Label(new Rect(16, Screen.height - 40, 400, 30), hp, style);
 
+            if (GetComponent<Player.PlayerRig>().Planted)
+            {
+                var planted = new GUIStyle(style) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+                planted.normal.textColor = new Color(1f, 0.6f, 0.2f);
+                GUI.Label(new Rect(Screen.width * 0.5f - 100f, Screen.height - 90f, 200f, 30f), "PLANTED (hold S)", planted);
+            }
+
             if (_weapon != null)
             {
                 DrawSlots(style);
@@ -89,7 +96,7 @@ namespace SIHKH.UI
 
         private void DrawSlots(GUIStyle style)
         {
-            // Slot 0 is the default gun; 1..N are one-offs. ">" marks the selection. Q cycles.
+            // Slot 0 is the default gun; 1..N are one-offs. ">" marks the selection. Keys 1..N+1 or Q.
             int slots = _weapon.OneOffSlots;
             float y = Screen.height - 40f - 26f * (slots + 1);
             for (int slot = 0; slot <= slots; slot++)

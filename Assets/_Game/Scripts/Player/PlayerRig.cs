@@ -50,13 +50,12 @@ namespace SIHKH.Player
         private readonly NetworkVariable<float> _strafe = new(
             0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-        // Toggled with S. Dug in: the cart won't budge, so a pulling partner snaps the chain.
+        // Held S. Dug in: the cart won't budge, so a pulling partner snaps the chain.
         private readonly NetworkVariable<bool> _planted = new(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         private InputAction _lookAction;
         private InputAction _moveAction;
-        private bool _plantKeyHeld;
         private Health _health;
 
         public int Seat => _seat.Value;
@@ -124,10 +123,8 @@ namespace SIHKH.Player
             // A/D slides your cart along your side of the oval.
             _strafe.Value = Mathf.Clamp(move.x, -1f, 1f);
 
-            // S toggles planting. Edge-detected by hand because Move is an axis, not a button.
-            bool plantKey = move.y < -0.5f;
-            if (plantKey && !_plantKeyHeld) _planted.Value = !_planted.Value;
-            _plantKeyHeld = plantKey;
+            // Hold S to plant. A hold, not a toggle: a stray press must never leave you pinned.
+            _planted.Value = move.y < -0.5f;
 
             // Don't turn the head while the player is using the mouse on the overlay.
             if (Cursor.lockState != CursorLockMode.Locked) return;

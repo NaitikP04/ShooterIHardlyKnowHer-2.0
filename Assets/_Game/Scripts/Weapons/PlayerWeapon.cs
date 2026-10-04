@@ -124,11 +124,27 @@ namespace SIHKH.Weapons
             if (_interactAction.WasPressedThisFrame()) UseInteract();
             if (_throwAction.WasPressedThisFrame() && SelectedOneOff != null) ThrowRpc(_selectedSlot.Value, _aimOrigin.forward);
             if (_swapAction.WasPressedThisFrame()) CycleSelection();
+            ReadNumberKeys();
 
             if (_attackAction.IsPressed() && Time.time >= _ownerNextShot)
             {
                 _ownerNextShot = Time.time + Current.SecondsBetweenShots;
                 Fire();
+            }
+        }
+
+        // 1 = default gun, 2..N+1 = one-off slots. Selecting an empty slot does nothing.
+        private void ReadNumberKeys()
+        {
+            var kb = Keyboard.current;
+            if (kb == null) return;
+
+            Key[] keys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9 };
+            for (int slot = 0; slot <= _oneOffSlots && slot < keys.Length; slot++)
+            {
+                if (!kb[keys[slot]].wasPressedThisFrame) continue;
+                if (slot == 0 || OneOffWeapon.HeldIn(OwnerClientId, slot) != null) _selectedSlot.Value = slot;
+                return;
             }
         }
 
@@ -155,10 +171,19 @@ namespace SIHKH.Weapons
             OneOffWeapon item = PromptTarget(out string action);
             if (item == null) return;
 
-            // Predict the slot the server will choose so the item is in hand immediately.
-            _selectedSlot.Value = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
-            if (action == "Catch!") CatchRpc(item.NetworkObject);
-            else PickUpRpc(item.NetworkObject);
+            if (action == "Catch!")
+            {
+                // A catch goes back into the item's slot and leaves your hands alone: you may
+                // be mid-fight with something else.
+                CatchRpc(item.NetworkObject);
+            }
+            else
+            {
+                // A deliberate pick-up equips it. Predict the slot so it's in hand immediately.
+                int slot = item.SlotFor(OwnerClientId, _oneOffSlots);
+                if (slot > 0) _selectedSlot.Value = slot;
+                PickUpRpc(item.NetworkObject);
+            }
         }
 
         /// <summary>Owner only. Aims where the eyes point, with the weapon's spread applied.</summary>
@@ -186,22 +211,18 @@ namespace SIHKH.Weapons
         [Rpc(SendTo.Server)]
         private void PickUpRpc(NetworkObjectReference itemRef)
         {
-            int slot = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
-            if (slot < 0) return;
             if (itemRef.TryGet(out NetworkObject obj) && obj.TryGetComponent(out OneOffWeapon item))
             {
-                item.TryPickUp(_rig, slot);
+                item.TryPickUp(_rig, _oneOffSlots);
             }
         }
 
         [Rpc(SendTo.Server)]
         private void CatchRpc(NetworkObjectReference itemRef)
         {
-            int slot = OneOffWeapon.FirstFreeSlot(OwnerClientId, _oneOffSlots);
-            if (slot < 0) return;
             if (itemRef.TryGet(out NetworkObject obj) && obj.TryGetComponent(out OneOffWeapon item))
             {
-                item.TryCatch(_rig, slot);
+                item.TryCatch(_rig, _oneOffSlots);
             }
         }
 
