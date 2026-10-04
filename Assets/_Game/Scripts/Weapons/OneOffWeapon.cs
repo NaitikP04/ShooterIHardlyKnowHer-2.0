@@ -21,12 +21,16 @@ namespace SIHKH.Weapons
     {
         public enum State : byte { OnGround, Held, InFlight }
 
+        /// <summary>Ballistic = a hand-over toss. Boomerang = the attack: out, curve, and back.</summary>
+        public enum FlightMode : byte { Ballistic, Boomerang }
+
         public struct ThrowData : INetworkSerializable
         {
             public Vector3 Origin;
-            public Vector3 Velocity;
+            public Vector3 Velocity;   // Ballistic: launch velocity. Boomerang: direction * range.
             public double LaunchTime;
             public ulong Thrower;
+            public FlightMode Mode;
 
             public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
             {
@@ -34,6 +38,7 @@ namespace SIHKH.Weapons
                 s.SerializeValue(ref Velocity);
                 s.SerializeValue(ref LaunchTime);
                 s.SerializeValue(ref Thrower);
+                s.SerializeValue(ref Mode);
             }
         }
 
@@ -84,8 +89,14 @@ namespace SIHKH.Weapons
         private readonly NetworkVariable<ThrowData> _throw = new(
             default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+        [Header("Boomerang attack")]
+        [SerializeField, Min(0.05f)] private float _cutRadius = 0.6f;
+
         private Renderer[] _renderers;
         private float _groundedSince;
+        private Vector3 _lastServerPosition;
+        private bool _onReturnLeg;
+        private readonly HashSet<NetworkObject> _cutThisLeg = new();
 
         public WeaponDefinition Definition => _definition;
         public State CurrentState => _state.Value;
@@ -176,24 +187,48 @@ namespace SIHKH.Weapons
             return true;
         }
 
-        /// <summary>Server only. Only the holder can throw.</summary>
+        /// <summary>Server only. Only the holder can throw. A hand-over toss.</summary>
         public bool TryThrow(PlayerRig by, Vector3 direction)
         {
             if (_state.Value != State.Held || _holder.Value != by.OwnerClientId) return false;
 
             direction.Normalize();
             Vector3 velocity = (direction + Vector3.up * _upwardBias).normalized * _throwSpeed;
+            Launch(by, by.Head.position + direction * 0.6f, velocity, FlightMode.Ballistic);
+            return true;
+        }
+
+        /// <summary>Server only. Only the holder can throw. The boomerang attack: out and back.</summary>
+        public bool TryThrowAttack(PlayerRig by, Vector3 direction)
+        {
+            if (_state.Value != State.Held || _holder.Value != by.OwnerClientId) return false;
+            if (!_definition.ThrowToAttack) return false;
+
+            // Follows the aim, pitch included: aim down to cut ground-level enemies. Thrown
+            // from chest height so the near part of the arc still reaches short enemies; the
+            // path itself refuses to go underground (see BoomerangPoint).
+            direction.Normalize();
+            Vector3 chest = by.Head.position + Vector3.down * 0.8f;
+            Launch(by, chest + direction * 0.6f, direction * _definition.Range, FlightMode.Boomerang);
+            return true;
+        }
+
+        private void Launch(PlayerRig by, Vector3 origin, Vector3 velocity, FlightMode mode)
+        {
             _throw.Value = new ThrowData
             {
-                Origin = by.Head.position + direction * 0.6f,
+                Origin = origin,
                 Velocity = velocity,
                 LaunchTime = NetworkManager.ServerTime.Time,
                 Thrower = by.OwnerClientId,
+                Mode = mode,
             };
+            _lastServerPosition = origin;
+            _onReturnLeg = false;
+            _cutThisLeg.Clear();
             _holder.Value = ulong.MaxValue;
             _slot.Value = 0;
             _state.Value = State.InFlight;
-            return true;
         }
 
         /// <summary>
@@ -245,9 +280,41 @@ namespace SIHKH.Weapons
         {
             ThrowData t = _throw.Value;
             float dt = (float)(now - t.LaunchTime);
+
+            if (t.Mode == FlightMode.Boomerang)
+            {
+                Vector3 p = BoomerangPoint(t, dt);
+                velocity = (BoomerangPoint(t, dt + 0.02f) - p) / 0.02f;
+                return p;
+            }
+
             velocity = t.Velocity + Physics.gravity * dt;
             return t.Origin + t.Velocity * dt + 0.5f * Physics.gravity * (dt * dt);
         }
+
+        /// <summary>
+        /// Out along the throw direction and back along the same line, bulging sideways only
+        /// near the turn. Both legs pass through what you aimed at, so a target straight ahead
+        /// is cut on the way out and again on the way back. Clamped to the trip time so it
+        /// rests at the origin once home.
+        /// </summary>
+        private Vector3 BoomerangPoint(ThrowData t, float elapsed)
+        {
+            float period = _definition.BoomerangSeconds;
+            float u = Mathf.Clamp01(elapsed / period);           // 0 start, 0.5 furthest, 1 home
+            Vector3 dir = t.Velocity.normalized;
+            float range = t.Velocity.magnitude;
+            Vector3 right = Vector3.Cross(Vector3.up, dir);
+            float along = range * Mathf.Sin(u * Mathf.PI);
+            float bulge = Mathf.Sin(u * Mathf.PI);
+            float side = range * _definition.BoomerangCurve * bulge * bulge * bulge; // stays near the line until the far end
+            Vector3 p = t.Origin + dir * along + right * side;
+            p.y = Mathf.Max(p.y, _restingHeight + 0.3f); // skim the ground, never tunnel
+            return p;
+        }
+
+        private bool BoomerangHome(ThrowData t, double now) =>
+            t.Mode == FlightMode.Boomerang && now - t.LaunchTime >= _definition.BoomerangSeconds;
 
         private void SetVisible(bool visible)
         {
@@ -280,7 +347,10 @@ namespace SIHKH.Weapons
                 case State.InFlight:
                     SetVisible(true);
                     Vector3 position = FlightPosition(NetworkManager.ServerTime.Time, out Vector3 velocity);
-                    transform.SetPositionAndRotation(position, Quaternion.LookRotation(velocity) * Quaternion.Euler(0f, 0f, Time.time * 720f));
+                    Quaternion facing = velocity.sqrMagnitude > 0.01f ? Quaternion.LookRotation(velocity) : transform.rotation;
+                    float spin = _throw.Value.Mode == FlightMode.Boomerang ? Time.time * 1440f : Time.time * 720f;
+                    Vector3 spinAxis = _throw.Value.Mode == FlightMode.Boomerang ? Vector3.up : Vector3.forward;
+                    transform.SetPositionAndRotation(position, facing * Quaternion.AngleAxis(spin, spinAxis));
                     if (IsServer) ServerResolveFlight(position, velocity);
                     break;
             }
@@ -289,7 +359,13 @@ namespace SIHKH.Weapons
         private void ServerResolveFlight(Vector3 position, Vector3 velocity)
         {
             ThrowData t = _throw.Value;
-            float age = (float)(NetworkManager.ServerTime.Time - t.LaunchTime);
+            double now = NetworkManager.ServerTime.Time;
+            float age = (float)(now - t.LaunchTime);
+
+            if (t.Mode == FlightMode.Boomerang)
+            {
+                CutEnemiesAlongPath(position, velocity, t, age);
+            }
 
             // Catching is a button press (TryCatch). Here we only resolve what happens when
             // nobody pressed it in time: the item reaches a head and bonks it.
@@ -312,10 +388,44 @@ namespace SIHKH.Weapons
                 return;
             }
 
-            if (position.y <= _restingHeight)
+            if (position.y <= _restingHeight || BoomerangHome(t, now))
             {
+                // A boomerang nobody caught comes to rest where it was thrown from.
                 Drop(position);
             }
+        }
+
+        /// <summary>
+        /// Boomerang only. Sweep the path since last frame and hurt every enemy it passes,
+        /// once per leg. Players are deliberately excluded: for them the weapon is a catch
+        /// or a bonk, never a cut.
+        /// </summary>
+        private void CutEnemiesAlongPath(Vector3 position, Vector3 velocity, ThrowData t, float age)
+        {
+            bool returnLeg = age >= 0.5f * _definition.BoomerangSeconds;
+            if (returnLeg && !_onReturnLeg)
+            {
+                _onReturnLeg = true;
+                _cutThisLeg.Clear(); // second chance at everything on the way back
+            }
+
+            Vector3 travel = position - _lastServerPosition;
+            float distance = travel.magnitude;
+            if (distance > 0.0001f)
+            {
+                var hits = Physics.SphereCastAll(_lastServerPosition, _cutRadius, travel / distance, distance, ~0, QueryTriggerInteraction.Ignore);
+                foreach (var hit in hits)
+                {
+                    if (hit.collider.GetComponentInParent<PlayerRig>() != null) continue;
+                    var obj = hit.collider.GetComponentInParent<NetworkObject>();
+                    if (obj == null || _cutThisLeg.Contains(obj)) continue;
+                    if (hit.collider.GetComponentInParent<IDamageable>() is not { } target) continue;
+
+                    _cutThisLeg.Add(obj);
+                    target.TakeDamage(new DamageInfo(_definition.Damage, _definition.DamageType, hit.point, velocity.normalized, t.Thrower));
+                }
+            }
+            _lastServerPosition = position;
         }
 
         private void ServerCheckUnreachable()

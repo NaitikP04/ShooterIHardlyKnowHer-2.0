@@ -10,20 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d58b3e420fa1c894bb5c4e493c0cd550, type: 3}
-  m_Name: Bouncy
+  m_Name: Boomerang
   m_EditorClassIdentifier: Assembly-CSharp::SIHKH.Weapons.WeaponDefinition
-  DisplayName: Bouncy
-  FireRate: 2
-  Damage: 5
-  DamageType: 0
-  Range: 60
+  DisplayName: Boomerang
+  FireRate: 1
+  Damage: 7
+  DamageType: 2
+  Range: 25
   SpreadDegrees: 0
-  ThrowToAttack: 0
+  ThrowToAttack: 1
   BoomerangCurve: 0.3
   BoomerangSeconds: 2.4
-  ProjectilePrefab: {fileID: 1461866579261846346, guid: 41f212af90623d342b0bd4324f388628, type: 3}
-  ProjectileSpeed: 45
-  Bounces: 10
-  Restitution: 0.92
-  GravityScale: 0.35
-  TracerColor: {r: 0.3, g: 0.95, b: 1, a: 1}
+  ProjectilePrefab: {fileID: 0}
+  ProjectileSpeed: 22
+  Bounces: 0
+  Restitution: 0.9
+  GravityScale: 1
+  TracerColor: {r: 1, g: 0.75, b: 0.2, a: 1}

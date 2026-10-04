@@ -20,6 +20,12 @@ namespace SIHKH.Weapons
         [Min(1f), Tooltip("Metres a hitscan shot travels")] public float Range = 60f;
         [Range(0f, 10f), Tooltip("Cone half-angle of random spread, degrees")] public float SpreadDegrees = 0.5f;
 
+        [Header("Thrown attack (boomerang-style)")]
+        [Tooltip("Firing throws the weapon itself along an out-and-back path instead of shooting")]
+        public bool ThrowToAttack = false;
+        [Range(0f, 1f), Tooltip("Sideways curve as a fraction of Range")] public float BoomerangCurve = 0.3f;
+        [Min(0.5f), Tooltip("Seconds for the full out-and-back trip")] public float BoomerangSeconds = 2.4f;
+
         [Header("Projectile (leave prefab empty for hitscan)")]
         public Projectile ProjectilePrefab;
         [Min(1f)] public float ProjectileSpeed = 22f;

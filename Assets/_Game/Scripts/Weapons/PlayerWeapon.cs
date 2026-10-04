@@ -166,6 +166,14 @@ namespace SIHKH.Weapons
         {
             WeaponDefinition weapon = Current;
             Vector3 direction = _aimOrigin.forward;
+
+            // Boomerang-style weapons: firing throws the item itself.
+            if (weapon.ThrowToAttack && SelectedOneOff != null)
+            {
+                AttackThrowRpc(_selectedSlot.Value, direction);
+                return;
+            }
+
             if (weapon.SpreadDegrees > 0f)
             {
                 direction = Quaternion.AngleAxis(Random.Range(0f, 360f), _aimOrigin.forward)
@@ -201,6 +209,12 @@ namespace SIHKH.Weapons
         private void ThrowRpc(int slot, Vector3 direction)
         {
             OneOffWeapon.HeldIn(OwnerClientId, slot)?.TryThrow(_rig, direction);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void AttackThrowRpc(int slot, Vector3 direction)
+        {
+            OneOffWeapon.HeldIn(OwnerClientId, slot)?.TryThrowAttack(_rig, direction);
         }
 
         [Rpc(SendTo.Server)]
